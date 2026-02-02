@@ -130,7 +130,7 @@ public class PharmacyServiceImpl implements PharmacyService {
         pharmacyRepository.save(pharmacy);
 
         // send mail
-        emailService.sendCredentials(pharmacy.getContactEmail(), username, rawPassword);
+        //emailService.sendCredentials(pharmacy.getContactEmail(), username, rawPassword);
     }
 
     // ✅ Reject pharmacy
