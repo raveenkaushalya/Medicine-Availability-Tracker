@@ -33,7 +33,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import logoImage from '../../assets/images/logo.png';
+import logoImage from '../../assets/images/logo-large.png';
 import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -926,8 +926,8 @@ export function AdminDashboard() {
         <>
           {isSidebarOpen ? (
             <div className="flex items-center gap-3 px-4 py-3 rounded-b-2xl shadow-sm" style={{ background: 'rgba(255,255,255,0.08)' }}>
-              <div className="flex-shrink-0 bg-white rounded-full shadow-md p-1 border border-gray-100">
-                <img src={logoImage} alt="PharmConnect Logo" className="w-8 h-8 object-contain" />
+              <div className="flex-shrink-0 bg-white rounded-xl shadow-md p-1 border border-gray-100">
+                <img src={logoImage} alt="Pharmora Logo" className="w-8 h-8 object-contain" />
               </div>
               <motion.h1
                 initial={{ opacity: 0 }}
@@ -935,7 +935,7 @@ export function AdminDashboard() {
                 className="text-base sm:text-lg font-extrabold text-white tracking-tight leading-tight uppercase drop-shadow-md"
                 style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.06em', textShadow: '0 1px 8px #04364A' }}
               >
-                Pharmora
+                <b>Pharmora</b>
               </motion.h1>
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -955,8 +955,8 @@ export function AdminDashboard() {
                 <Menu className="w-4 h-4 text-white" />
               </button>
               <div className="flex items-center justify-center w-full">
-                <div className="bg-white rounded-full shadow-md p-2 border border-gray-100 flex items-center justify-center mx-auto">
-                  <img src={logoImage} alt="PharmConnect Logo" className="w-8 h-8 object-contain" />
+                <div className="bg-white rounded-xl shadow-md p-2 border border-gray-100 flex items-center justify-center mx-auto">
+                  <img src={logoImage} alt="Pharmora Logo" className="w-6 h-6 object-contain" />
                 </div>
               </div>
             </div>

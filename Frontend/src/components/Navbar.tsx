@@ -181,7 +181,7 @@ export function Navbar({
             >
               <motion.img
                 src={logoImage}
-                alt="PharmConnect Logo"
+                alt="Pharmora Logo"
                 className="w-14 h-14 sm:w-16 sm:h-16 object-contain mix-blend-multiply"
                 animate={{ rotate: 0 }}
                 whileHover={{
@@ -194,7 +194,7 @@ export function Navbar({
               />
             </motion.div>
             <motion.div
-              className="hidden sm:block -ml-1"
+              className="-ml-1"
             >
               <motion.h1
                 className="text-left text-lg sm:text-xl text-slate-900 tracking-tight leading-tight font-bold uppercase"
@@ -419,20 +419,20 @@ export function Navbar({
               whileTap={{ scale: 0.9 }}
               onClick={handleSearchClick}
               aria-label="Search"
-              className="p-2 rounded-lg hover:bg-white/10 backdrop-blur-sm"
+              className="p-2 rounded-lg"
             >
-              <Search className="w-6 h-6 text-black" />
+              <Search className={`w-6 h-6 ${currentPage === 'home' && viewMode === 'user' && scrollOpacity < 0.1 ? 'text-gray-200' : 'text-teal-600'}`} />
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Menu"
-              className="p-2 rounded-lg hover:bg-white/10 backdrop-blur-sm"
+              className="p-2 rounded-lg"
             >
               {mobileMenuOpen ? (
-                <X className="w-6 h-6 text-black" />
+                <X className={`w-6 h-6 ${currentPage === 'home' && viewMode === 'user' && scrollOpacity < 0.1 ? 'text-gray-200' : 'text-teal-600'}`} />
               ) : (
-                <Menu className="w-6 h-6 text-black" />
+                <Menu className={`w-6 h-6 ${currentPage === 'home' && viewMode === 'user' && scrollOpacity < 0.1 ? 'text-gray-200' : 'text-teal-600'}`} />
               )}
             </motion.button>
           </div>
@@ -459,30 +459,35 @@ export function Navbar({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.98, opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="w-[95vw] max-w-sm rounded-2xl shadow-2xl flex flex-col items-center px-4 pt-6 pb-8 relative mt-8"
-              style={{ minHeight: 380, marginTop: '2.5rem', paddingBottom: 'env(safe-area-inset-bottom, 2rem)', background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 60%, #0ea5e9 100%)' }}
+              className="w-[95vw] max-w-sm rounded-2xl shadow-2xl flex flex-col items-center px-4 pt-12 pb-12 relative mt-4 backdrop-blur-xl border border-gray-200 bg-white"
+              style={{ minHeight: 380, marginTop: '1rem', paddingBottom: 'env(safe-area-inset-bottom, 2rem)' }}
             >
               {/* Top: Branding and Close Button */}
-              <div className="w-full flex items-center justify-between mb-2">
+              <div className="w-full flex items-center mb-4">
                 <div className="flex items-center gap-2 select-none">
-                  <img src={logoImage} alt="Pharmora Logo" className="w-8 h-8 object-contain" />
-                  <span className="text-lg font-bold text-white tracking-tight uppercase" style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.05em' }}>Pharmora</span>
+                  <img src={logoImage} alt="Pharmora Logo" className="w-10 h-10" />
+                  <span className="text-xl font-extrabold text-slate-900 tracking-tight uppercase text-center drop-shadow" style={{ fontFamily: "'Montserrat', sans-serif", letterSpacing: '0.07em' }}><strong>Pharmora</strong></span>
                 </div>
                 <button
                   aria-label="Close menu"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-full hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   tabIndex={0}
                 >
-                  <X className="w-6 h-6 text-cyan-200" />
+                  <motion.button
+                    whileTap={{ scale: 1.2, boxShadow: "0 0 0 8px rgba(20,184,166,0.15)" }}
+                    transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                    className="p-2 focus:outline-none transition bg-transparent border-none"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <X className="w-7 h-7 text-teal-600" />
+                  </motion.button>
                 </button>
               </div>
               {/* Nav Links */}
-              <div className="flex flex-col items-center w-full mt-4 mb-6 overflow-y-auto max-h-[320px] scrollbar-thin scrollbar-thumb-sky-800 scrollbar-track-sky-900">
+              <div className="flex flex-col items-center justify-center w-full mt-2 mb-6 overflow-y-auto max-h-[320px] scrollbar-thin scrollbar-thumb-teal-400 scrollbar-track-white/10">
                 <button
                   onClick={() => { handlePageChange("home"); setMobileMenuOpen(false); }}
-                  className={`w-full text-center py-3 my-2 rounded-xl font-semibold transition-colors ${currentPage === "home" ? "text-black bg-sky-800/60" : "text-white hover:bg-sky-800/40 hover:text-gray-300 active:text-black"}`}
-                  style={{ fontSize: 19, minHeight: 56 }}
+                    className={`w-4/5 mx-auto text-center py-3 px-2 my-2 rounded-2xl transition-all duration-200 text-lg ${currentPage === "home" ? "text-black font-bold w-[100%] min-h-[48px]" : "text-gray-700 w-[90%] min-h-[48px]"}`}
                   tabIndex={0}
                   aria-current={currentPage === "home" ? "page" : undefined}
                 >
@@ -490,8 +495,7 @@ export function Navbar({
                 </button>
                 <button
                   onClick={() => { handlePageChange("about"); setMobileMenuOpen(false); }}
-                  className={`w-full text-center py-3 my-2 rounded-xl font-semibold transition-colors ${currentPage === "about" ? "text-black bg-sky-800/60" : "text-white hover:bg-sky-800/40 hover:text-gray-300 active:text-black"}`}
-                  style={{ fontSize: 19, minHeight: 56 }}
+                    className={`w-4/5 mx-auto text-center py-3 px-2 my-2 rounded-2xl transition-all duration-200 text-lg ${currentPage === "about" ? "text-black font-bold w-[100%] min-h-[48px]" : "text-gray-700 w-[90%] min-h-[48px]"}`}
                   tabIndex={0}
                   aria-current={currentPage === "about" ? "page" : undefined}
                 >
@@ -499,8 +503,7 @@ export function Navbar({
                 </button>
                 <button
                   onClick={() => { handlePageChange("help"); setMobileMenuOpen(false); }}
-                  className={`w-full text-center py-3 my-2 rounded-xl font-semibold transition-colors ${currentPage === "help" ? "text-black bg-sky-800/60" : "text-white hover:bg-sky-800/40 hover:text-gray-300 active:text-black"}`}
-                  style={{ fontSize: 19, minHeight: 56 }}
+                    className={`w-4/5 mx-auto text-center py-3 px-2 my-2 rounded-2xl transition-all duration-200 text-lg ${currentPage === "help" ? "text-black font-bold w-[100%] min-h-[48px]" : "text-gray-700 w-[90%] min-h-[48px]"}`}
                   tabIndex={0}
                   aria-current={currentPage === "help" ? "page" : undefined}
                 >
@@ -508,8 +511,7 @@ export function Navbar({
                 </button>
                 <button
                   onClick={() => { handlePageChange("contact"); setMobileMenuOpen(false); }}
-                  className={`w-full text-center py-3 my-2 rounded-xl font-semibold transition-colors ${currentPage === "contact" ? "text-black bg-sky-800/60" : "text-white hover:bg-sky-800/40 hover:text-gray-300 active:text-black"}`}
-                  style={{ fontSize: 19, minHeight: 56 }}
+                    className={`w-4/5 mx-auto text-center py-3 px-2 my-2 rounded-2xl transition-all duration-200 text-lg ${currentPage === "contact" ? "text-black font-bold w-[100%] min-h-[48px]" : "text-gray-700 w-[90%] min-h-[48px]"}`}
                   tabIndex={0}
                   aria-current={currentPage === "contact" ? "page" : undefined}
                 >
@@ -519,7 +521,7 @@ export function Navbar({
               {/* CTA Button */}
               <button
                 onClick={() => { onViewModeChange('owner'); setMobileMenuOpen(false); }}
-                className="w-full mt-6 mb-2 py-3 px-2 rounded-full bg-black text-white font-bold text-lg shadow-lg transition-colors border-2 border-black hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full mt-6 mb-2 py-3 px-2 rounded-full bg-black text-white font-bold text-lg shadow-lg transition-all border-0 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-black"
                 style={{ minHeight: 48 }}
                 tabIndex={0}
               >
