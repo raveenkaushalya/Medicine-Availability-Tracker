@@ -57,10 +57,26 @@ export function PharmacyAuth({ onLogin, onRegister }: PharmacyAuthProps) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    onLogin();
-  };
+  const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    // Calls backend (your apiFetch uses credentials: "include")
+    await apiFetch("/api/v1/pharmacies/login", {
+      method: "POST",
+      body: JSON.stringify({
+        username: loginEmail,   // username = pharmacy email
+        password: loginPassword,
+      }),
+    });
+
+    onLogin(); // go to PharmacyOwnerDashboard
+  } catch (err: any) {
+    setErrorDialogText(err?.message || "Login failed");
+    setShowErrorMessage(true);
+  }
+};
+
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();

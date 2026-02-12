@@ -37,11 +37,12 @@ export const PharmacySetPassword = () => {
 
       await axios.post("http://localhost:8080/api/v1/pharmacies/set-password", {
         token,
-        newPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
       });
 
       alert("✅ Password set successfully!");
-      navigate("/pharmacy/login"); // we will build this next
+      navigate("/"); 
     } catch (err: any) {
       setMsg(err?.response?.data?.message || "Failed to set password.");
     } finally {
@@ -50,7 +51,14 @@ export const PharmacySetPassword = () => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#f4f4f4" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        background: "#f4f4f4",
+      }}
+    >
       <form
         onSubmit={submit}
         style={{
