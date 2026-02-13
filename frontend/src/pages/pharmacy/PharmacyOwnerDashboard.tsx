@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { apiFetch } from '../../utils/api';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChatbotPopup } from '../../components/ChatbotPopup';
 import { Sidebar } from './components/Sidebar';
@@ -40,11 +41,26 @@ export interface InventoryItem {
 }
 
 export function PharmacyOwnerDashboard() {
-  const [pharmacyName] = useState('Central Pharmacy');
+  const [pharmacy, setPharmacy] = useState<any>(null);
+const pharmacyName = pharmacy?.tradeName || pharmacy?.legalEntityName || "Pharmacy";
+
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [activeView, setActiveView] = useState('inventory');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showChatbot, setShowChatbot] = useState(false);
+
+  useEffect(() => {
+  const loadMe = async () => {
+    try {
+      const res = await apiFetch("/api/v1/pharmacies/me");
+      setPharmacy(res.data); // because ApiResponse { success, message, data }
+    } catch (e) {
+      // optional: redirect to login if not logged in
+      console.error(e);
+    }
+  };
+  loadMe();
+}, []);
 
   // Memoize handlers for better performance
   const handleAddToInventory = useCallback((medicationId: number, quantity: number, price: number) => {
@@ -94,7 +110,16 @@ export function PharmacyOwnerDashboard() {
         return <SettingsView />;
       case 'profile':
       case 'profileview':
-        return <ProfileView />;
+        return (
+  <ProfileView
+    pharmacy={pharmacy}
+    onRefresh={async () => {
+      const res = await apiFetch("/api/v1/pharmacies/me");
+      setPharmacy(res.data);
+    }}
+  />
+);
+
       default:
         return (
           <InventoryView

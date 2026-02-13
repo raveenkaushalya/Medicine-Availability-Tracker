@@ -77,6 +77,8 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+
+
     // ✅ Global CORS for React + cookies
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

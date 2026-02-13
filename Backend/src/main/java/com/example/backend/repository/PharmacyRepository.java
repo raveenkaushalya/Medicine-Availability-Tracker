@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import com.example.backend.entity.Pharmacy; // (or your package)
 
+import java.util.Optional;
+
 
 public interface PharmacyRepository extends JpaRepository<Pharmacy, Integer> {
 
@@ -16,6 +18,7 @@ public interface PharmacyRepository extends JpaRepository<Pharmacy, Integer> {
     boolean existsByEmail(String email);
     boolean existsByBusinessRegNo(String businessRegNo);
 
+    Optional<Pharmacy> findByEmail(String email);
 
     Page<Pharmacy> findByStatus(PharmacyStatus status, Pageable pageable);
 

@@ -1,22 +1,16 @@
+const BASE_URL = "http://localhost:8080";
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(BASE_URL + path, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
-    credentials: "include", 
+    credentials: "include",
   });
 
-  let data: any = null;
-  try {
-    data = await res.json();
-  } catch {}
-
-  if (!res.ok) {
-    const msg = data?.message || data?.error || `${res.status} ${res.statusText}`;
-    throw new Error(msg);
-  }
-
+  const data = await res.json();
+  if (!res.ok) throw data;
   return data;
 }

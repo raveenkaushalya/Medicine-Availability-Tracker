@@ -43,7 +43,8 @@ public class PharmacyAuthController {
             throw new RuntimeException("Invalid email or password");
 
         // ✅ Session login (simple)
-        request.getSession(true).setAttribute("PHARMACY_USER_ID", user.getId());
+        request.getSession(true).setAttribute("USER_ID", user.getId());
+
 
         return new ApiResponse(true, "Pharmacy logged in", user.getUsername());
     }
