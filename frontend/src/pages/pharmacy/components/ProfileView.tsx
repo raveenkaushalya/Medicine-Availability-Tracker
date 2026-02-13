@@ -1,38 +1,125 @@
-import { motion } from 'motion/react';
-import { useState } from 'react';
-import { User, MapPin, Phone, Mail, Clock, Edit2, Save, Building, Globe } from 'lucide-react';
+import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import {
+  User,
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  Edit2,
+  Save,
+  Building,
+  Globe,
+} from "lucide-react";
+import { apiFetch } from "../../../utils/api";
 
-export function ProfileView() {
+type ProfileViewProps = {
+  pharmacy: any;
+  onRefresh: () => Promise<void>;
+};
+
+export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    pharmacyName: 'Central Pharmacy',
-    ownerName: 'Dr. John Smith',
-    contactPersonName: 'Jane Doe',
-    contactPersonTitle: 'Manager',
-    contactPersonPhone: '+1 (555) 987-6543',
-    email: 'contact@centralpharmacy.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main Street, Downtown',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001',
-    country: 'United States',
-    licenseNumber: 'PHM-2024-12345',
-    established: '2010',
-    businessRegNumber: 'BRN-2024-98765',
-    website: 'www.centralpharmacy.com',
-    description: 'We are a trusted community pharmacy serving the downtown area for over a decade. Our mission is to provide quality healthcare products and exceptional customer service.',
+
+  // ✅ keep your profile state as a normal object (NO hooks inside)
+  const [profile, setProfile] = useState<any>({
+    pharmacyName: "",
+    ownerName: "",
+    email: "",
+    website: "",
+    licenseNumber: "",
+    businessRegNumber: "",
+    established: "",
+
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
+
+    contactPersonName: "",
+    contactPersonTitle: "",
+    contactPersonPhone: "",
+    pharmacyPhoneNumber: "",
+    description: "",
     operatingHours: {
-      weekdays: '8:00 AM - 8:00 PM',
-      saturday: '9:00 AM - 6:00 PM',
-      sunday: '10:00 AM - 4:00 PM',
+      weekdays: "",
+      saturday: "",
+      sunday: "",
     },
   });
 
-  const handleSave = () => {
-    console.log('Saving profile:', profile);
-    setIsEditing(false);
-    alert('Profile updated successfully!');
+  // ✅ useEffect must be HERE (top-level), not inside useState
+  useEffect(() => {
+    if (!pharmacy) return;
+
+    setProfile((prev: any) => ({
+      ...prev,
+      pharmacyName: pharmacy.tradeName ?? pharmacy.legalEntityName ?? prev.pharmacyName,
+ownerName: pharmacy.ownerName ?? pharmacy.contactFullName ?? prev.ownerName,
+email: pharmacy.email ?? prev.email,
+website: pharmacy.website ?? prev.website,
+licenseNumber: pharmacy.nmraLicense ?? pharmacy.licenseNumber ?? prev.licenseNumber,
+businessRegNumber: pharmacy.businessRegNumber ?? prev.businessRegNumber,
+established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
+
+      // Location
+      address: pharmacy.address || prev.address,
+      city: pharmacy.city || prev.city,
+      state: pharmacy.state || prev.state,
+      zipCode: pharmacy.zipCode || prev.zipCode,
+      country: pharmacy.country || prev.country,
+
+      contactPersonName: pharmacy.contactFullName ?? prev.contactPersonName,
+      contactPersonTitle: pharmacy.contactTitle ?? prev.contactPersonTitle,
+      contactPersonPhone: pharmacy.contactPhone ?? prev.contactPersonPhone,
+      pharmacyPhoneNumber:
+        pharmacy.pharmacyPhoneNumber ?? prev.pharmacyPhoneNumber,
+      description: pharmacy.aboutPharmacy ?? prev.description,
+
+      operatingHours: (() => {
+        const fallback = prev.operatingHours;
+        const raw = pharmacy.openingHoursJson;
+        if (!raw) return fallback;
+
+        try {
+          const obj = JSON.parse(raw);
+          return {
+            ...fallback,
+            weekdays: obj.weekdays ?? fallback.weekdays,
+            saturday: obj.saturday ?? fallback.saturday,
+            sunday: obj.sunday ?? fallback.sunday,
+          };
+        } catch {
+          return fallback;
+        }
+      })(),
+    }));
+  }, [pharmacy]);
+
+  const handleSave = async () => {
+    try {
+      const openingHoursJson = JSON.stringify(profile.operatingHours);
+
+      const res = await apiFetch("/api/v1/pharmacies/me", {
+        method: "PATCH",
+        body: JSON.stringify({
+          contactFullName: profile.contactPersonName,
+          contactTitle: profile.contactPersonTitle,
+          contactPhone: profile.contactPersonPhone,
+          pharmacyPhoneNumber: profile.pharmacyPhoneNumber,
+          openingHoursJson,
+          aboutPharmacy: profile.description,
+        }),
+      });
+
+      console.log("PATCH OK:", res);
+      await onRefresh();
+      setIsEditing(false);
+    } catch (e) {
+      console.error("PATCH FAILED:", e);
+      alert("Save failed. Check console (F12) for error.");
+    }
   };
 
   return (
@@ -40,8 +127,12 @@ export function ProfileView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-gray-900 text-xl sm:text-2xl">Pharmacy Profile</h2>
-          <p className="text-gray-600 text-sm">View and manage your pharmacy information</p>
+          <h2 className="text-gray-900 text-xl sm:text-2xl">
+            Pharmacy Profile
+          </h2>
+          <p className="text-gray-600 text-sm">
+            View and manage your pharmacy information
+          </p>
         </div>
         {!isEditing ? (
           <motion.button
@@ -84,7 +175,7 @@ export function ProfileView() {
       >
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-4xl text-blue-950">
-            {profile.pharmacyName.charAt(0)}
+            {(profile.pharmacyName ?? "P").charAt(0)}
           </div>
           <div className="flex-1 text-center md:text-left">
             <h2 className="text-white mb-2">{profile.pharmacyName}</h2>
@@ -121,79 +212,97 @@ export function ProfileView() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Contact Person Name */}
-                    <div>
-                      <label className="block text-gray-700 mb-2 text-sm">Contact Person Name</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={profile.contactPersonName}
-                          onChange={(e) => setProfile({ ...profile, contactPersonName: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
-                          <User className="w-4 h-4 text-gray-400" />
-                          {profile.contactPersonName}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Contact Person Title */}
-                    <div>
-                      <label className="block text-gray-700 mb-2 text-sm">Contact Person Title</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={profile.contactPersonTitle}
-                          onChange={(e) => setProfile({ ...profile, contactPersonTitle: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
-                          <User className="w-4 h-4 text-gray-400" />
-                          {profile.contactPersonTitle}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Contact Person Phone */}
-                    <div>
-                      <label className="block text-gray-700 mb-2 text-sm">Contact Person Phone</label>
-                      {isEditing ? (
-                        <input
-                          type="tel"
-                          value={profile.contactPersonPhone}
-                          onChange={(e) => setProfile({ ...profile, contactPersonPhone: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
-                          <Phone className="w-4 h-4 text-gray-400" />
-                          {profile.contactPersonPhone}
-                        </div>
-                      )}
-                    </div>
-
+          {/* Contact Person Name */}
           <div>
-            <label className="block text-gray-700 mb-2 text-sm">Pharmacy Phone Number</label>
+            <label className="block text-gray-700 mb-2 text-sm">
+              Contact Person Name
+            </label>
             {isEditing ? (
-              <input
-                type="tel"
-                value={profile.phone}
-                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            ) : (
-              <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
-                <Phone className="w-4 h-4 text-gray-400" />
-                {profile.phone}
-              </div>
-            )}
+  <input
+    type="text"
+    value={profile.contactPersonName || ""}
+    onChange={(e) =>
+      setProfile((p: any) => ({ ...p, contactPersonName: e.target.value }))
+    }
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+  />
+) : (
+  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+    {profile.contactPersonName || "-"}
+  </div>
+)}
+
           </div>
-          
+
+          {/* Contact Person Title */}
           <div>
-            <label className="block text-gray-700 mb-2 text-sm">Pharmacy Email Address</label>
+            <label className="block text-gray-700 mb-2 text-sm">
+              Contact Person Title
+            </label>
+            {isEditing ? (
+  <input
+    type="text"
+    value={profile.contactPersonTitle || ""}
+    onChange={(e) =>
+      setProfile((p: any) => ({ ...p, contactPersonTitle: e.target.value }))
+    }
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+  />
+) : (
+  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+    {profile.contactPersonTitle || "-"}
+  </div>
+)}
+
+          </div>
+
+          {/* Contact Person Phone */}
+          <div>
+            <label className="block text-gray-700 mb-2 text-sm">
+              Contact Person Phone
+            </label>
+            {isEditing ? (
+  <input
+    type="text"
+    value={profile.contactPersonPhone || ""}
+    onChange={(e) =>
+      setProfile((p: any) => ({ ...p, contactPersonPhone: e.target.value }))
+    }
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+  />
+) : (
+  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+    {profile.contactPersonPhone || "-"}
+  </div>
+)}
+
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-2 text-sm">
+              Pharmacy Phone Number
+            </label>
+            {isEditing ? (
+  <input
+    type="text"
+    value={profile.pharmacyPhoneNumber || ""}
+    onChange={(e) =>
+      setProfile((p: any) => ({ ...p, pharmacyPhoneNumber: e.target.value }))
+    }
+    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+  />
+) : (
+  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+    {profile.pharmacyPhoneNumber || "-"}
+  </div>
+)}
+
+          </div>
+
+          <div>
+            <label className="block text-gray-700 mb-2 text-sm">
+              Pharmacy Email Address
+            </label>
             <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
               <Mail className="w-4 h-4 text-gray-400" />
               {profile.email}
@@ -209,14 +318,18 @@ export function ProfileView() {
           </div>
 
           <div>
-            <label className="block text-gray-700 mb-2 text-sm">License Number</label>
+            <label className="block text-gray-700 mb-2 text-sm">
+              License Number
+            </label>
             <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
               <Building className="w-4 h-4 text-gray-400" />
               {profile.licenseNumber}
             </div>
           </div>
           <div>
-            <label className="block text-gray-700 mb-2 text-sm">Business Registration Number</label>
+            <label className="block text-gray-700 mb-2 text-sm">
+              Business Registration Number
+            </label>
             <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
               <Building className="w-4 h-4 text-gray-400" />
               {profile.businessRegNumber}
@@ -245,27 +358,37 @@ export function ProfileView() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-gray-700 mb-2">Street Address</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{profile.address}</div>
+            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+              {profile.address}
+            </div>
           </div>
 
           <div>
             <label className="block text-gray-700 mb-2">City</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{profile.city}</div>
+            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+              {profile.city}
+            </div>
           </div>
 
           <div>
             <label className="block text-gray-700 mb-2">State</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{profile.state}</div>
+            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+              {profile.state}
+            </div>
           </div>
 
           <div>
             <label className="block text-gray-700 mb-2">ZIP Code</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{profile.zipCode}</div>
+            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+              {profile.zipCode}
+            </div>
           </div>
 
           <div>
             <label className="block text-gray-700 mb-2">Country</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{profile.country}</div>
+            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+              {profile.country}
+            </div>
           </div>
         </div>
       </motion.div>
@@ -289,25 +412,43 @@ export function ProfileView() {
 
         <div className="space-y-4">
           {[
-            { key: 'weekdays', label: 'Monday - Friday' },
-            { key: 'saturday', label: 'Saturday' },
-            { key: 'sunday', label: 'Sunday' },
+            { key: "weekdays", label: "Monday - Friday" },
+            { key: "saturday", label: "Saturday" },
+            { key: "sunday", label: "Sunday" },
           ].map((day) => (
-            <div key={day.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div
+              key={day.key}
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+            >
               <span className="text-gray-700">{day.label}</span>
               {isEditing ? (
                 <input
                   type="text"
-                  value={profile.operatingHours[day.key as keyof typeof profile.operatingHours]}
-                  onChange={(e) => setProfile({
-                    ...profile,
-                    operatingHours: { ...profile.operatingHours, [day.key]: e.target.value }
-                  })}
+                  value={
+                    profile.operatingHours[
+                      day.key as keyof typeof profile.operatingHours
+                    ]
+                  }
+                  onChange={(e) =>
+                    setProfile({
+                      ...profile,
+                      operatingHours: {
+                        ...profile.operatingHours,
+                        [day.key]: e.target.value,
+                      },
+                    })
+                  }
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 text-white bg-white/20 placeholder:text-white/60"
-                  style={{ backgroundColor: 'white', color: '#222' }}
+                  style={{ backgroundColor: "white", color: "#222" }}
                 />
               ) : (
-                <span className="text-gray-900">{profile.operatingHours[day.key as keyof typeof profile.operatingHours]}</span>
+                <span className="text-gray-900">
+                  {
+                    profile.operatingHours[
+                      day.key as keyof typeof profile.operatingHours
+                    ]
+                  }
+                </span>
               )}
             </div>
           ))}
@@ -327,20 +468,27 @@ export function ProfileView() {
           </div>
           <div>
             <h3 className="text-gray-900">About Your Pharmacy</h3>
-            <p className="text-gray-500 text-sm">Tell customers about your pharmacy</p>
+            <p className="text-gray-500 text-sm">
+              Tell customers about your pharmacy
+            </p>
           </div>
         </div>
 
         {isEditing ? (
-          <textarea
-            value={profile.description}
-            onChange={(e) => setProfile({ ...profile, description: e.target.value })}
-            rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 text-gray-900"
-          />
-        ) : (
-          <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{profile.description}</p>
-        )}
+  <textarea
+    value={profile.description || ""}
+    onChange={(e) =>
+      setProfile((p: any) => ({ ...p, description: e.target.value }))
+    }
+    rows={4}
+    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+  />
+) : (
+  <div className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+    {profile.description || "-"}
+  </div>
+)}
+
       </motion.div>
     </div>
   );

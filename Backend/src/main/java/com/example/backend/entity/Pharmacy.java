@@ -50,6 +50,16 @@ public class Pharmacy {
     private LocalDate declarationDate;
     private boolean agreedToDeclaration;
 
+    // ===== Editable Profile Fields (Pharmacy Portal) =====
+    private String pharmacyPhoneNumber;   // extra public phone (optional)
+
+    @Column(columnDefinition = "TEXT")
+    private String aboutPharmacy;         // About your pharmacy
+
+    @Column(columnDefinition = "TEXT")
+    private String openingHoursJson;      // store opening hours as JSON
+
+
     // ===== Workflow =====
     @Enumerated(EnumType.STRING)
     private PharmacyStatus status;
