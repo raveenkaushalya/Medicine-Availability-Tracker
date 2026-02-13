@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChatbotPopup } from '../../components/ChatbotPopup';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
-// import { DashboardView } from './components/DashboardView';
+import { DashboardView } from './components/DashboardView';
 import { InventoryView } from './components/InventoryView';
 import { InquiriesView } from './components/InquiriesView';
 import { SettingsView } from './components/SettingsView';
@@ -94,44 +94,31 @@ const pharmacyName = pharmacy?.tradeName || pharmacy?.legalEntityName || "Pharma
   }, []);
 
   // Memoize the rendered view for performance
-  const renderedView = useMemo(() => {
-    switch (activeView) {
-      case 'inventory':
-        return (
-          <InventoryView
-            inventory={inventory}
-            medications={medicationDatabase}
-            onAddToInventory={handleAddToInventory}
-            onUpdateInventory={handleUpdateInventory}
-            onRemoveFromInventory={handleRemoveFromInventory}
-          />
-        );
-      case 'settings':
-        return <SettingsView />;
-      case 'profile':
-      case 'profileview':
-        return (
-  <ProfileView
-    pharmacy={pharmacy}
-    onRefresh={async () => {
-      const res = await apiFetch("/api/v1/pharmacies/me");
-      setPharmacy(res.data);
-    }}
-  />
-);
+const renderedView = useMemo(() => {
+  switch (activeView) {
+    case "inventory":
+      return <InventoryView />;
 
-      default:
-        return (
-          <InventoryView
-            inventory={inventory}
-            medications={medicationDatabase}
-            onAddToInventory={handleAddToInventory}
-            onUpdateInventory={handleUpdateInventory}
-            onRemoveFromInventory={handleRemoveFromInventory}
-          />
-        );
-    }
+    case "settings":
+      return <SettingsView />;
+
+    case "profile":
+    case "profileview":
+      return (
+        <ProfileView
+          pharmacy={pharmacy}
+          onRefresh={async () => {
+            const res = await apiFetch("/api/v1/pharmacies/me");
+            setPharmacy(res.data);
+          }}
+        />
+      );
+
+    default:
+      return <InventoryView />;
+  }
   }, [activeView, inventory, handleAddToInventory, handleUpdateInventory, handleRemoveFromInventory]);
+
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col lg:flex-row relative">

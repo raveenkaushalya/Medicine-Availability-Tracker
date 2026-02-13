@@ -17,6 +17,11 @@ public class MedicineCatalogServiceImpl implements MedicineCatalogService {
     private final MedicineMasterRepository medicineRepo;
 
     @Override
+    public MedicineMaster getOne(Integer id) {
+        return medicineRepo.findById(id).orElseThrow(() -> new RuntimeException("Medicine not found"));
+    }
+
+    @Override
     public List<MedicineSuggestResponse> suggest(String q) {
         if (q == null) return Collections.emptyList();
         q = q.trim();

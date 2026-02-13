@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.response.MedicineSuggestResponse;
+import com.example.backend.entity.MedicineMaster;
 import com.example.backend.service.MedicineCatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,4 +20,9 @@ public class MedicineCatalogController {
     public List<MedicineSuggestResponse> suggest(@RequestParam String q) {
         return medicineCatalogService.suggest(q);
     }
+    @GetMapping("/{id}")
+    public MedicineMaster getOne(@PathVariable Integer id) {
+        return medicineCatalogService.getOne(id);
+    }
+
 }

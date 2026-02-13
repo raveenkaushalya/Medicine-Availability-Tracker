@@ -1,414 +1,478 @@
-import { motion, AnimatePresence } from 'motion/react';
-import { useState, memo } from 'react';
-import { SearchableSelect } from '../../../components/SearchableSelect';
-import { Search, Plus, Edit, Trash2, Package, Filter } from 'lucide-react';
-import { InventoryItem } from '../PharmacyOwnerDashboard';
+import { useEffect, useMemo, useState } from "react";
+import { apiFetch } from "../../../utils/api";
+import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 
-interface InventoryViewProps {
-  inventory: InventoryItem[];
-  medications: any[];
-  onAddToInventory: (medicationId: number, quantity: number, price: number) => void;
-  onUpdateInventory: (medicationId: number, quantity: number, price: number) => void;
-  onRemoveFromInventory: (medicationId: number) => void;
-}
+type SuggestItem = { id: number; name?: string; label?: string };
+type InventoryRow = {
+  id: number;
+  medicineId: number;
+  regNo: string;
+  genericName: string;
+  brandName: string;
+  dosage: string;
+  manufacturer: string | null;
+  country: string | null;
+  stock: number;
+  price: number;
+};
 
-export const InventoryView = memo(function InventoryView({
-  inventory,
-  medications,
-  onAddToInventory,
-  onUpdateInventory,
-  onRemoveFromInventory
-}: InventoryViewProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  // For select medicine search bar visibility
-  const [showSearch, setShowSearch] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<number | null>(null);
+export function InventoryView() {
+  const [rows, setRows] = useState<InventoryRow[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Form states
-  const [selectedMedication, setSelectedMedication] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [price, setPrice] = useState('');
-  const [genericName, setGenericName] = useState('');
-  const [brandName, setBrandName] = useState('');
-  const [dosage, setDosage] = useState('');
-  const [manufacturer, setManufacturer] = useState('');
-  const [country, setCountry] = useState('');
-  const [regNo, setRegNo] = useState('');
-  const [status, setStatus] = useState('Active');
-  const [stock, setStock] = useState('');
+  // ✅ TABLE search (inventory page)
+  const [tableQuery, setTableQuery] = useState("");
 
+  // ✅ MODAL search (add medicine)
+  const [modalQuery, setModalQuery] = useState("");
+  const [modalSuggestions, setModalSuggestions] = useState<SuggestItem[]>([]);
+  const [showModalSug, setShowModalSug] = useState(false);
 
+  // Modal
+  const [open, setOpen] = useState(false);
+  const [selectedMed, setSelectedMed] = useState<any>(null);
+  const [stock, setStock] = useState("");
+  const [price, setPrice] = useState("");
+  const [editId, setEditId] = useState<number | null>(null);
 
-  const categories = ['All', ...new Set(medications.map(m => m.category))];
+  // Load pharmacy inventory table
+  const loadInventory = async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/api/v1/pharmacies/inventory");
+      setRows(res.data || []);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    loadInventory();
+  }, []);
 
-  // Filter inventory
-  const filteredInventory = inventory.filter(item => {
-    const medication = medications.find(m => m.id === item.medicationId);
-    if (!medication) return false;
+  // ✅ MODAL suggestions
+  useEffect(() => {
+    const query = modalQuery.trim();
+    if (query.length < 2) {
+      setModalSuggestions([]);
+      return;
+    }
 
-    const matchesSearch = medication.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      medication.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || medication.category === selectedCategory;
-
-    return matchesSearch && matchesCategory;
-  });
-
-  // Calculate available and out-of-stock counts
-  const availableCount = inventory.filter(item => item.quantity > 0).length;
-  const outOfStockCount = inventory.filter(item => item.quantity === 0).length;
-
-
-
-  const handleSubmit = () => {
-    const medication = medications.find(m => m.name === selectedMedication);
-    // Use 'stock' as the quantity field for adding/updating inventory
-    if (medication && stock && price) {
-      if (editingItem !== null) {
-        onUpdateInventory(medication.id, parseInt(stock), parseFloat(price));
-        setEditingItem(null);
-      } else {
-        onAddToInventory(medication.id, parseInt(stock), parseFloat(price));
+    const t = setTimeout(async () => {
+      try {
+        const res = await apiFetch(
+          `/api/medicines/suggest?q=${encodeURIComponent(query)}`,
+        );
+        setModalSuggestions(res.data || res || []);
+      } catch {
+        setModalSuggestions([]);
       }
-      resetForm();
-      setShowAddModal(false);
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [modalQuery]);
+
+  // ✅ Filter rows by tableQuery only
+  const filteredRows = useMemo(() => {
+    const query = tableQuery.trim().toLowerCase();
+    if (!query) return rows;
+
+    const score = (r: InventoryRow) => {
+      const g = (r.genericName || "").toLowerCase();
+      const b = (r.brandName || "").toLowerCase();
+      const reg = (r.regNo || "").toLowerCase();
+
+      if (g.startsWith(query) || b.startsWith(query)) return 3;
+      if (g.includes(query) || b.includes(query)) return 2;
+      if (reg.includes(query)) return 1;
+      return 0;
+    };
+
+    // ✅ keep all rows, but move matches to top
+    return [...rows].sort((a, b) => score(b) - score(a));
+  }, [tableQuery, rows]);
+
+  // Select medicine from suggestion → fetch full details
+  const selectMedicine = async (id: number) => {
+    const med = await apiFetch(`/api/medicines/${id}`);
+    const data = med.data ?? med;
+
+    setSelectedMed(data);
+
+    // ✅ close dropdown immediately
+    setShowModalSug(false);
+    setModalSuggestions([]);
+
+    // ✅ set input text to selected item
+    setModalQuery(
+      (data.genericName || data.brandName || "") +
+        (data.dosage ? ` - ${data.dosage}` : ""),
+    );
+  };
+
+  const openAddModal = () => {
+    setOpen(true);
+    setEditId(null);
+    setSelectedMed(null);
+    setStock("");
+    setPrice("");
+
+    // ✅ clear modal search
+    setModalQuery("");
+    setModalSuggestions([]);
+    setShowModalSug(false);
+  };
+
+  const openEditModal = (row: InventoryRow) => {
+    setOpen(true);
+    setEditId(row.id);
+
+    setSelectedMed({
+      id: row.medicineId,
+      regNo: row.regNo,
+      genericName: row.genericName,
+      brandName: row.brandName,
+      dosage: row.dosage,
+      manufacturer: row.manufacturer,
+      country: row.country,
+      status: "Active",
+    });
+
+    setStock(String(row.stock));
+    setPrice(String(row.price));
+
+    // ✅ no modal search needed in edit
+    setModalQuery(`${row.genericName} - ${row.dosage}`);
+    setModalSuggestions([]);
+    setShowModalSug(false);
+  };
+
+  const save = async () => {
+    if (!selectedMed) return alert("Select a medicine first");
+    if (stock === "" || price === "") return alert("Enter stock and price");
+
+    const payload = {
+      medicineId: Number(selectedMed.id),
+      stock: Number(stock),
+      price: Number(price),
+    };
+
+    if (editId) {
+      await apiFetch(`/api/v1/pharmacies/inventory/${editId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+    } else {
+      await apiFetch(`/api/v1/pharmacies/inventory`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     }
+
+    setOpen(false);
+    await loadInventory();
   };
 
-  const resetForm = () => {
-    setSelectedMedication('');
-    setQuantity('');
-    setPrice('');
-    setGenericName('');
-    setBrandName('');
-    setDosage('');
-    setManufacturer('');
-    setCountry('');
-    setRegNo('');
-    setStatus('Active');
-    setStock('');
+  const remove = async (id: number) => {
+    const ok = window.confirm("Delete this medicine from your inventory?");
+    if (!ok) return;
 
+    await apiFetch(`/api/v1/pharmacies/inventory/${id}`, { method: "DELETE" });
+    await loadInventory();
   };
 
-  const handleEdit = (item: InventoryItem) => {
-    const medication = medications.find(m => m.id === item.medicationId);
-    if (medication) {
-      setSelectedMedication(medication.name);
-      setQuantity(item.quantity.toString());
-      setPrice(item.price.toString());
-      setEditingItem(item.medicationId);
-      setShowAddModal(true);
-    }
-  };
+  // ✅ FIX KPI LOGIC
+  const availableCount = rows.filter((r) => (r.stock ?? 0) > 0).length;
+  const outOfStockCount = rows.filter((r) => (r.stock ?? 0) <= 0).length;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header with Add Button */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="w-full sm:w-auto">
-          <h2 className="text-gray-900 text-lg sm:text-xl md:text-2xl">Medicine Inventory</h2>
-          <p className="text-gray-600 text-xs sm:text-sm mt-1">Manage your medication stock and pricing</p>
+    <div className="space-y-6">
+      {/* Title + Add button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Medicine Inventory
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Manage your medication stock and pricing
+          </p>
         </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => {
-              resetForm();
-              setEditingItem(null);
-              setShowAddModal(true);
-            }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors text-xs sm:text-sm"
-          >
-            <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span>Add Medicine</span>
-          </motion.button>
+
+        <button
+          onClick={openAddModal}
+          className="bg-blue-900 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-800"
+        >
+          <Plus className="w-4 h-4" />
+          Add Medicine
+        </button>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white border rounded-xl p-5 shadow-sm">
+          <p className="text-gray-500 text-sm">Available Medicines</p>
+          <p className="text-2xl font-semibold text-gray-900">
+            {availableCount}
+          </p>
+        </div>
+        <div className="bg-white border rounded-xl p-5 shadow-sm">
+          <p className="text-gray-500 text-sm">Out of Stock</p>
+          <p className="text-2xl font-semibold text-gray-900">
+            {outOfStockCount}
+          </p>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 bg-white rounded-xl shadow border border-gray-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100">
-            <svg className="w-6 h-6 text-blue-900" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" />
-              <circle cx="12" cy="12" r="10" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-blue-900">{availableCount}</div>
-            <div className="text-xs text-gray-600">Available Medicines</div>
-          </div>
-        </div>
-        <div className="flex-1 bg-white rounded-xl shadow border border-gray-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-red-100">
-            <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 6L6 18M6 6l12 12" />
-              <circle cx="12" cy="12" r="10" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-red-600">{outOfStockCount}</div>
-            <div className="text-xs text-gray-600">Out of Stock</div>
-          </div>
-        </div>
-      </div>
+      {/* Table card */}
+      <div className="bg-white border rounded-xl shadow-sm">
+        <div className="p-4 border-b">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Current Inventory
+          </h3>
+          <p className="text-sm text-gray-500">
+            Latest medication stock and availability
+          </p>
 
-      {/* Inventory Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        {/* Table Header with Filters */}
-        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div>
-              <h3 className="text-gray-900 text-sm sm:text-base md:text-lg">Current Inventory</h3>
-              <p className="text-gray-600 text-xs sm:text-sm mt-0.5 hidden sm:block">Latest medication stock and availability</p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row lg:flex-row gap-3 sm:gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search medications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-              />
-            </div>
-            {/* Category Filter */}
-            <div className="flex items-center gap-2 w-full sm:w-auto sm:min-w-48">
-              <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                title="Filter by category"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
+          {/* Search bar with dropdown suggestions */}
+          <div className="mt-4 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={tableQuery}
+              onChange={(e) => setTableQuery(e.target.value)}
+              placeholder="Search medications..."
+              className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm"
+            />
           </div>
         </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
-            <thead className="bg-gray-50">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-600">
               <tr>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Generic Name</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Brand Name</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider hidden md:table-cell">Manufacturer</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider hidden md:table-cell">Country</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider hidden lg:table-cell">Reg. No</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="text-left px-4 py-3">GENERIC NAME</th>
+                <th className="text-left px-4 py-3">BRAND NAME</th>
+                <th className="text-left px-4 py-3">DOSAGE</th>
+                <th className="text-left px-4 py-3">MANUFACTURER</th>
+                <th className="text-left px-4 py-3">COUNTRY</th>
+                <th className="text-left px-4 py-3">REG. NO</th>
+                <th className="text-left px-4 py-3">STOCK</th>
+                <th className="text-left px-4 py-3">PRICE</th>
+                <th className="text-left px-4 py-3">ACTIONS</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInventory.length === 0 ? (
+
+            <tbody>
+              {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-3 sm:px-6 py-8 sm:py-12 text-center text-gray-500">
-                    <Package className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 text-gray-300" />
-                    <p className="text-sm sm:text-base">No medications in inventory</p>
-                    <p className="text-xs sm:text-sm mt-1">Add medications to get started</p>
+                  <td
+                    colSpan={9}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
+                    Loading...
+                  </td>
+                </tr>
+              ) : filteredRows.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={9}
+                    className="px-4 py-10 text-center text-gray-500"
+                  >
+                    No medications in inventory
                   </td>
                 </tr>
               ) : (
-                filteredInventory.map((item) => {
-                  const medication = medications.find(m => m.id === item.medicationId);
-                  if (!medication) return null;
+                filteredRows.map((r) => (
+                  <tr key={r.id} className="border-t">
+                    <td className="px-4 py-3">{r.genericName}</td>
+                    <td className="px-4 py-3 font-semibold">{r.brandName}</td>
+                    <td className="px-4 py-3">{r.dosage}</td>
+                    <td className="px-4 py-3">{r.manufacturer || "N/A"}</td>
+                    <td className="px-4 py-3">{r.country || "N/A"}</td>
+                    <td className="px-4 py-3">{r.regNo || "N/A"}</td>
+                    <td className="px-4 py-3 font-semibold text-green-600">
+                      {r.stock}
+                    </td>
+                    <td className="px-4 py-3">
+                      {Intl.NumberFormat("en-LK", {
+                        style: "currency",
+                        currency: "LKR",
+                      }).format(Number(r.price || 0))}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <button
+                          className="text-blue-700 hover:text-blue-900"
+                          title="Edit"
+                          onClick={() => openEditModal(r)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
 
-                  return (
-                    <tr key={item.medicationId} className="hover:bg-gray-50">
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">{medication.genericName || medication.name}</td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm font-medium text-gray-900">{medication.brandName || medication.name}</div>
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600">{medication.dosage}</td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden md:table-cell">{medication.manufacturer || 'N/A'}</td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden md:table-cell">{medication.country || 'N/A'}</td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-600 hidden lg:table-cell">{medication.regNo || 'N/A'}</td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs rounded-full font-medium ${medication.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                          {medication.status || 'Active'}
-                        </span>
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900">{Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(item.price)}</td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <span className={`text-xs sm:text-sm font-medium ${item.quantity === 0 ? 'text-red-600' :
-                          item.quantity < 10 ? 'text-amber-600' :
-                            'text-green-600'
-                          }`}>
-                          {item.quantity}
-                        </span>
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 whitespace-nowrap text-sm">
-                        <div className="flex gap-1 sm:gap-2">
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="text-blue-900 hover:text-blue-700 p-1"
-                            title="Edit medicine"
-                          >
-                            <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </button>
-                          <button
-                            onClick={() => onRemoveFromInventory(item.medicationId)}
-                            className="text-red-600 hover:text-red-900 p-1"
-                            title="Remove medicine"
-                          >
-                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete"
+                          onClick={() => remove(r.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {showAddModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4"
-            onClick={() => setShowAddModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-xl p-10 sm:p-16 max-w-4xl w-full shadow-2xl max-h-[100vh] min-h-[600px] overflow-y-auto"
-            >
+      {/* Modal */}
+      {open && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              {editId ? "Edit Medicine" : "Add New Medication"}
+            </h3>
 
-              <h3 className="text-gray-900 mb-4 sm:mb-6 text-base sm:text-lg md:text-xl">
-                {editingItem ? 'Edit Medication' : 'Add New Medication'}
-              </h3>
+            {/* Search medicine (medicine_master) */}
+            {!editId && (
+              <div className="mb-4">
+                <label className="text-sm text-gray-700">Select Medicine</label>
+                <input
+                  value={modalQuery}
+                  onChange={(e) => {
+                    setModalQuery(e.target.value);
+                    setShowModalSug(true);
+                  }}
+                  onFocus={() => setShowModalSug(true)}
+                  onBlur={() => setTimeout(() => setShowModalSug(false), 120)}
+                  placeholder="Search medicine..."
+                  className="w-full mt-2 px-3 py-2 border rounded-lg"
+                />
 
-              <div className="space-y-3 sm:space-y-4">
-                {/* Custom Searchable Dropdown for Medicine Selection */}
-                <div>
-                  <SearchableSelect
-                    medicines={medications}
-                    value={selectedMedication}
-                    onChange={val => {
-                      setSelectedMedication(val);
-                      const med = medications.find(m => m.name === val);
-                      if (med) {
-                        setGenericName(med.genericName || med.name || '');
-                        setBrandName(med.brandName || med.name || '');
-                        setDosage(med.dosage || '');
-                        setManufacturer(med.manufacturer || '');
-                        setCountry(med.country || '');
-                        setRegNo(med.regNo || '');
-                        setStatus(med.status || 'Active');
-                      }
+                {showModalSug && modalQuery.trim().length >= 2 && (
+                  <div
+                    className="mt-2 w-full border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-auto"
+                    style={{
+                      backgroundColor: "#fff",
+                      color: "#111827",
+                      WebkitTextFillColor: "#111827",
+                      opacity: 1,
                     }}
-                    label="Select Medicine"
-                  />
-                </div>
-
-                {/* Show details of selected medicine (read-only) */}
-                {selectedMedication && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Generic Name</label>
-                      <input type="text" value={genericName} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Generic Name" placeholder="Generic Name" />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Brand Name</label>
-                      <input type="text" value={brandName} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Brand Name" placeholder="Brand Name" />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Dosage</label>
-                      <input type="text" value={dosage} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Dosage" placeholder="Dosage" />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Category</label>
-                      <input type="text" value={medications.find(m => m.name === selectedMedication)?.category || ''} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Category" placeholder="Category" />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Manufacturer</label>
-                      <input type="text" value={manufacturer} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Manufacturer" placeholder="Manufacturer" />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Country</label>
-                      <input type="text" value={country} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Country" placeholder="Country" />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Reg. No</label>
-                      <input type="text" value={regNo} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Reg. No" placeholder="Reg. No" />
-                    </div>
-                    <div>
-                      <label className="block text-gray-700 mb-1 text-xs sm:text-sm font-medium">Status</label>
-                      <input type="text" value={status} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-xs sm:text-sm" title="Status" placeholder="Status" />
-                    </div>
+                  >
+                    {modalSuggestions.length === 0 ? (
+                      <div
+                        className="px-4 py-3 text-sm"
+                        style={{
+                          color: "#6B7280",
+                          WebkitTextFillColor: "#6B7280",
+                          opacity: 1,
+                        }}
+                      >
+                        No suggestions
+                      </div>
+                    ) : (
+                      modalSuggestions.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className="w-full px-4 py-3 text-left hover:bg-gray-50 text-sm"
+                          style={{
+                            backgroundColor: "#fff",
+                            color: "#111827",
+                            WebkitTextFillColor: "#111827", // ✅ this fixes “invisible text”
+                            opacity: 1,
+                          }}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // keep focus behaviour stable
+                            selectMedicine(s.id); // ✅ select + close dropdown
+                          }}
+                        >
+                          {s.label || s.name}
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
-
-                {/* Stock and Price (manual entry) */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-gray-700 mb-1 sm:mb-2 text-xs sm:text-sm font-medium">Stock</label>
-                    <input
-                      type="number"
-                      value={stock}
-                      onChange={(e) => setStock(e.target.value)}
-                      placeholder="Quantity"
-                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-1 sm:mb-2 text-xs sm:text-sm font-medium">Price</label>
-                    <input
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="e.g., 10.00"
-                      className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                    />
-                  </div>
-                </div>
               </div>
+            )}
 
-              {/* Actions */}
-              <div className="flex items-center gap-2 sm:gap-3 mt-4 sm:mt-6">
-                <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    resetForm();
-                    setEditingItem(null);
-                  }}
-                  className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-xs sm:text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="flex-1 px-3 sm:px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition-colors text-xs sm:text-sm"
-                >
-                  {editingItem ? 'Update' : 'Add'}
-                </button>
+            {/* Auto filled details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-gray-700">Generic Name</label>
+                <input
+                  value={selectedMed?.genericName || ""}
+                  readOnly
+                  className="w-full mt-2 px-3 py-2 border rounded-lg bg-gray-50"
+                />
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div>
+                <label className="text-sm text-gray-700">Brand Name</label>
+                <input
+                  value={selectedMed?.brandName || ""}
+                  readOnly
+                  className="w-full mt-2 px-3 py-2 border rounded-lg bg-gray-50"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-700">Dosage</label>
+                <input
+                  value={selectedMed?.dosage || ""}
+                  readOnly
+                  className="w-full mt-2 px-3 py-2 border rounded-lg bg-gray-50"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-700">Reg. No</label>
+                <input
+                  value={selectedMed?.regNo || ""}
+                  readOnly
+                  className="w-full mt-2 px-3 py-2 border rounded-lg bg-gray-50"
+                />
+              </div>
+            </div>
+
+            {/* Stock + Price */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+              <div>
+                <label className="text-sm text-gray-700">Stock</label>
+                <input
+                  value={stock}
+                  onChange={(e) => setStock(e.target.value)}
+                  placeholder="Quantity"
+                  className="w-full mt-2 px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-gray-700">Price</label>
+                <input
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="e.g. 10.00"
+                  className="w-full mt-2 px-3 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setOpen(false)}
+                className="px-6 py-2 rounded-lg border"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={save}
+                className="px-6 py-2 rounded-lg bg-blue-900 text-white hover:bg-blue-800"
+              >
+                {editId ? "Update" : "Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-});
+}
