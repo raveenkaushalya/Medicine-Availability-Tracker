@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import MapPicker from "./components/MapPicker";
 
-export const PharmacySetPassword = () => {
+export default function PharmacySetPassword() {
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -236,4 +237,4 @@ export const PharmacySetPassword = () => {
       </form>
     </div>
   );
-};
+}
