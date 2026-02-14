@@ -245,7 +245,7 @@ export function PharmacyAuth({ onLogin, onRegister }: PharmacyAuthProps) {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
               <h3 className="text-xl font-semibold text-red-700">
-                Registration Failed
+                Login Failed!
               </h3>
               <p className="mt-2 text-gray-700">{errorDialogText}</p>
 

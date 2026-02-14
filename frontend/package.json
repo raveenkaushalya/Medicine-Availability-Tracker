@@ -38,6 +38,7 @@
             "cmdk": "^1.1.1",
             "emailjs-com": "^3.2.0",
             "embla-carousel-react": "^8.6.0",
+            "framer-motion": "^12.34.0",
             "html2canvas": "^1.4.1",
             "input-otp": "^1.4.2",
             "jspdf": "^4.0.0",
@@ -61,7 +62,7 @@
       },
       "devDependencies": {
             "@types/node": "^20.10.0",
-            "@types/react": "^19.2.10",
+            "@types/react": "^19.2.14",
             "@types/react-dom": "^19.2.3",
             "@types/react-router-dom": "^5.3.3",
             "@vitejs/plugin-react-swc": "^3.10.2",
