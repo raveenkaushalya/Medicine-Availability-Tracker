@@ -2,8 +2,10 @@ package com.example.backend.service.impl;
 
 import com.example.backend.dto.request.SetPasswordRequest;
 import com.example.backend.entity.PasswordSetupToken;
+import com.example.backend.entity.Pharmacy;
 import com.example.backend.entity.User;
 import com.example.backend.repository.PasswordSetupTokenRepository;
+import com.example.backend.repository.PharmacyRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.PasswordSetupService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,15 +21,18 @@ public class PasswordSetupServiceImpl implements PasswordSetupService {
 
     private final PasswordSetupTokenRepository tokenRepository;
     private final UserRepository userRepository;
+    private final PharmacyRepository pharmacyRepository;
     private final PasswordEncoder passwordEncoder;
 
     public PasswordSetupServiceImpl(
             PasswordSetupTokenRepository tokenRepository,
             UserRepository userRepository,
+            PharmacyRepository pharmacyRepository,   // ✅ NEW
             PasswordEncoder passwordEncoder
     ) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
+        this.pharmacyRepository = pharmacyRepository; // ✅ NEW
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -41,6 +46,11 @@ public class PasswordSetupServiceImpl implements PasswordSetupService {
         // Basic password rules (simple)
         if (req.getNewPassword().length() < 8) {
             throw new RuntimeException("Password must be at least 8 characters!");
+        }
+
+        // ✅ NEW: Validate location
+        if (req.getLatitude() == null || req.getLongitude() == null) {
+            throw new RuntimeException("Please pin your pharmacy location on the map!");
         }
 
         // Hash raw token and lookup
@@ -63,6 +73,15 @@ public class PasswordSetupServiceImpl implements PasswordSetupService {
         user.setPassword(passwordEncoder.encode(req.getNewPassword()));
         user.setEnabled(true);
         userRepository.save(user);
+
+        // ✅ NEW: Save location to Pharmacy table
+        // Assumption: Pharmacy email == user.username (your login uses username as email)
+        Pharmacy pharmacy = pharmacyRepository.findByEmail(user.getUsername())
+                .orElseThrow(() -> new RuntimeException("Pharmacy record not found for this account!"));
+
+        pharmacy.setLatitude(req.getLatitude());
+        pharmacy.setLongitude(req.getLongitude());
+        pharmacyRepository.save(pharmacy);
 
         // Mark token used
         token.setUsedAt(LocalDateTime.now());

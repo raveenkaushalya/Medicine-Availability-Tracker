@@ -50,8 +50,9 @@ public class Pharmacy {
     private LocalDate declarationDate;
     private boolean agreedToDeclaration;
 
-    // ===== Editable Profile Fields (Pharmacy Portal) =====
-    private String pharmacyPhoneNumber;   // extra public phone (optional)
+    private Double latitude;
+    private Double longitude;
+
 
     @Column(columnDefinition = "TEXT")
     private String aboutPharmacy;         // About your pharmacy

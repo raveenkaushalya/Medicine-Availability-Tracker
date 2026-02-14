@@ -17,7 +17,7 @@ public class UpdatePharmacyMeRequest {
     private String contactPhone;
 
     @Size(max = 30)
-    private String pharmacyPhoneNumber;
+    private String telephone;
 
     @Size(max = 2000)
     private String aboutPharmacy;

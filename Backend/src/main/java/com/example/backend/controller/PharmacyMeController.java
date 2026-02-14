@@ -72,7 +72,7 @@ public class PharmacyMeController {
         if (req.getContactFullName() != null) pharmacy.setContactFullName(req.getContactFullName());
         if (req.getContactTitle() != null) pharmacy.setContactTitle(req.getContactTitle());
         if (req.getContactPhone() != null) pharmacy.setContactPhone(req.getContactPhone());
-        if (req.getPharmacyPhoneNumber() != null) pharmacy.setPharmacyPhoneNumber(req.getPharmacyPhoneNumber());
+        if (req.getTelephone() != null) pharmacy.setTelephone(req.getTelephone());
         if (req.getAboutPharmacy() != null) pharmacy.setAboutPharmacy(req.getAboutPharmacy());
         if (req.getOpeningHoursJson() != null) pharmacy.setOpeningHoursJson(req.getOpeningHoursJson());
 

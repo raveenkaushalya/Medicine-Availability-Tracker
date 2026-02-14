@@ -17,8 +17,11 @@ public interface PharmacyRepository extends JpaRepository<Pharmacy, Integer> {
     boolean existsByNmraLicense(String nmraLicense);
     boolean existsByEmail(String email);
     boolean existsByBusinessRegNo(String businessRegNo);
+    long countByStatus(PharmacyStatus status);
+
 
     Optional<Pharmacy> findByEmail(String email);
+
 
     Page<Pharmacy> findByStatus(PharmacyStatus status, Pageable pageable);
 

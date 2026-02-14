@@ -24,7 +24,6 @@ public class PharmacyMeResponse {
     private String contactTitle;
     private String contactPhone;
 
-    private String pharmacyPhoneNumber;
     private String aboutPharmacy;
     private String openingHoursJson;
 

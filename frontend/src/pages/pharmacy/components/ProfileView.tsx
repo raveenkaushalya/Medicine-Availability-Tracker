@@ -55,7 +55,7 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
 
     setProfile((prev: any) => ({
       ...prev,
-      pharmacyName: pharmacy.tradeName ?? pharmacy.legalEntityName ?? prev.pharmacyName,
+      pharmacyName:pharmacy.legalEntityName ?? pharmacy.tradeName ??  prev.pharmacyName,
 ownerName: pharmacy.ownerName ?? pharmacy.contactFullName ?? prev.ownerName,
 email: pharmacy.email ?? prev.email,
 website: pharmacy.website ?? prev.website,
@@ -64,7 +64,7 @@ businessRegNumber: pharmacy.businessRegNumber ?? prev.businessRegNumber,
 established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
 
       // Location
-      address: pharmacy.address || prev.address,
+      address: pharmacy.addressInSriLanka || prev.address,
       city: pharmacy.city || prev.city,
       state: pharmacy.state || prev.state,
       zipCode: pharmacy.zipCode || prev.zipCode,
@@ -74,7 +74,7 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
       contactPersonTitle: pharmacy.contactTitle ?? prev.contactPersonTitle,
       contactPersonPhone: pharmacy.contactPhone ?? prev.contactPersonPhone,
       pharmacyPhoneNumber:
-        pharmacy.pharmacyPhoneNumber ?? prev.pharmacyPhoneNumber,
+        pharmacy.telephone ?? prev.telephone,
       description: pharmacy.aboutPharmacy ?? prev.description,
 
       operatingHours: (() => {
@@ -309,13 +309,7 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
             </div>
           </div>
 
-          <div>
-            <label className="block text-gray-700 mb-2 text-sm">Website</label>
-            <div className="flex items-center gap-2 text-gray-900 bg-gray-50 px-4 py-2 rounded-lg text-sm">
-              <Globe className="w-4 h-4 text-gray-400" />
-              {profile.website}
-            </div>
-          </div>
+          
 
           <div>
             <label className="block text-gray-700 mb-2 text-sm">
@@ -354,8 +348,15 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
             <p className="text-gray-500 text-sm">Your pharmacy address</p>
           </div>
         </div>
-
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-gray-700 mb-2">Address</label>
+            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+              {profile.address}
+            </div>
+          </div>
+          
           <div className="md:col-span-2">
             <label className="block text-gray-700 mb-2">Street Address</label>
             <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
