@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import MapPicker from "../components/MapPicker"; // ✅ adjust path if needed
+import MapPicker from "./components/MapPicker";
 
 export const PharmacySetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -14,11 +14,15 @@ export const PharmacySetPassword = () => {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ NEW: location state
+  // ✅ Picked (not confirmed yet)
+  const [pickedLat, setPickedLat] = useState<number | null>(null);
+  const [pickedLng, setPickedLng] = useState<number | null>(null);
+
+  // ✅ Confirmed (ONLY these will be sent to backend)
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
 
-  // ✅ NEW: GPS button
+  // ✅ GPS button -> sets picked only (not confirmed)
   const useMyLocation = () => {
     if (!navigator.geolocation) {
       setMsg("Geolocation is not supported in this device.");
@@ -27,13 +31,23 @@ export const PharmacySetPassword = () => {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLatitude(pos.coords.latitude);
-        setLongitude(pos.coords.longitude);
-        setMsg("✅ Location detected. You can also adjust by clicking the map.");
+        setPickedLat(pos.coords.latitude);
+        setPickedLng(pos.coords.longitude);
+        setMsg("📍 Location detected. Now press ✅ Confirm Location.");
       },
       () => setMsg("❌ Location permission denied. Please pin on the map."),
       { enableHighAccuracy: true, timeout: 8000 }
     );
+  };
+
+  const confirmPickedLocation = () => {
+    if (pickedLat == null || pickedLng == null) {
+      setMsg("Please select a location on the map first.");
+      return;
+    }
+    setLatitude(pickedLat);
+    setLongitude(pickedLng);
+    setMsg("✅ Location confirmed!");
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -54,9 +68,9 @@ export const PharmacySetPassword = () => {
       return;
     }
 
-    // ✅ NEW: require location
+    // ✅ require CONFIRMED location
     if (latitude == null || longitude == null) {
-      setMsg("Please pin your pharmacy location on the map (or use GPS button).");
+      setMsg("Please pin your location and press ✅ Confirm Location.");
       return;
     }
 
@@ -80,6 +94,9 @@ export const PharmacySetPassword = () => {
       setLoading(false);
     }
   };
+
+  const confirmed = latitude != null && longitude != null;
+  const canConfirm = pickedLat != null && pickedLng != null;
 
   return (
     <div
@@ -128,7 +145,7 @@ export const PharmacySetPassword = () => {
           style={{ width: "100%", padding: 10, marginTop: 6, marginBottom: 12 }}
         />
 
-        {/* ✅ NEW: GPS button */}
+        {/* GPS */}
         <button
           type="button"
           onClick={useMyLocation}
@@ -145,40 +162,76 @@ export const PharmacySetPassword = () => {
           📍 Use my current location (GPS)
         </button>
 
-        {/* ✅ NEW: Map pin */}
+        {/* Map pin */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 14, marginBottom: 8 }}>
             Pin your pharmacy location (click on map)
           </div>
+
           <MapPicker
             onPick={(lat, lng) => {
-              setLatitude(lat);
-              setLongitude(lng);
+              setPickedLat(lat);
+              setPickedLng(lng);
               setMsg("");
             }}
-            initial={latitude && longitude ? { lat: latitude, lng: longitude } : undefined}
+            // show picked marker if exists, else show confirmed marker if exists
+            initial={
+              pickedLat != null && pickedLng != null
+                ? { lat: pickedLat, lng: pickedLng }
+                : latitude != null && longitude != null
+                ? { lat: latitude, lng: longitude }
+                : undefined
+            }
           />
-          {latitude && longitude && (
+
+          {/* Picked */}
+          {pickedLat != null && pickedLng != null && (
             <div style={{ fontSize: 12, marginTop: 8, color: "#333" }}>
-              Selected: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              Picked: {pickedLat.toFixed(6)}, {pickedLng.toFixed(6)}
+            </div>
+          )}
+
+          {/* Confirm button */}
+          <button
+            type="button"
+            disabled={!canConfirm || loading}
+            onClick={confirmPickedLocation}
+            style={{
+              width: "100%",
+              padding: 10,
+              borderRadius: 8,
+              border: "none",
+              background: !canConfirm ? "#bbb" : "#16a34a",
+              color: "white",
+              cursor: !canConfirm ? "not-allowed" : "pointer",
+              marginTop: 10,
+            }}
+          >
+            ✅ Confirm Location
+          </button>
+
+          {/* Confirmed */}
+          {confirmed && (
+            <div style={{ fontSize: 12, marginTop: 8, color: "#333" }}>
+              Confirmed: {latitude!.toFixed(6)}, {longitude!.toFixed(6)}
             </div>
           )}
         </div>
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !confirmed}
           style={{
             width: "100%",
             padding: 10,
             borderRadius: 8,
             border: "none",
-            background: loading ? "#888" : "#2563eb",
+            background: loading || !confirmed ? "#888" : "#2563eb",
             color: "white",
-            cursor: loading ? "not-allowed" : "pointer",
+            cursor: loading || !confirmed ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "Setting..." : "Set Password"}
+          {loading ? "Setting..." : confirmed ? "Set Password" : "Confirm location first"}
         </button>
       </form>
     </div>

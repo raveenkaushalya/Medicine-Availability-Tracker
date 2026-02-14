@@ -2,15 +2,15 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.request.UpdatePharmacyMeRequest;
 import com.example.backend.dto.response.ApiResponse;
+import com.example.backend.dto.response.PharmacyMeResponse;
 import com.example.backend.entity.Pharmacy;
+import com.example.backend.entity.PharmacyLocation;
 import com.example.backend.entity.User;
+import com.example.backend.repository.PharmacyLocationRepository;
 import com.example.backend.repository.PharmacyRepository;
 import com.example.backend.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.PatchMapping;
-
 
 @RestController
 @RequestMapping("/api/v1/pharmacies")
@@ -18,21 +18,24 @@ import org.springframework.web.bind.annotation.PatchMapping;
 public class PharmacyMeController {
 
     private final PharmacyRepository pharmacyRepository;
+    private final PharmacyLocationRepository pharmacyLocationRepository;
     private final UserRepository userRepository;
 
-    public PharmacyMeController(PharmacyRepository pharmacyRepository,
-                                UserRepository userRepository) {
+    public PharmacyMeController(
+            PharmacyRepository pharmacyRepository,
+            PharmacyLocationRepository pharmacyLocationRepository,
+            UserRepository userRepository
+    ) {
         this.pharmacyRepository = pharmacyRepository;
+        this.pharmacyLocationRepository = pharmacyLocationRepository;
         this.userRepository = userRepository;
     }
 
     private User requireLoggedInUser(HttpServletRequest request) {
         var session = request.getSession(false);
         if (session == null) throw new RuntimeException("Not logged in");
-
         Integer userId = (Integer) session.getAttribute("USER_ID");
         if (userId == null) throw new RuntimeException("Not logged in");
-
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
@@ -42,33 +45,48 @@ public class PharmacyMeController {
                 .orElseThrow(() -> new RuntimeException("Pharmacy not found"));
     }
 
-    // ✅ Load full pharmacy details for dashboard
+    private PharmacyMeResponse toResponse(Pharmacy p, PharmacyLocation loc) {
+        return PharmacyMeResponse.builder()
+                .id(p.getId())
+                .legalEntityName(p.getLegalEntityName())
+                .tradeName(p.getTradeName())
+                .nmraLicense(p.getNmraLicense())
+                .businessRegNo(p.getBusinessRegNo())
+                .address(p.getAddressInSriLanka())
+                .telephone(p.getTelephone())
+                .email(p.getEmail())
+                .entityType(p.getEntityType())
+                .contactFullName(p.getContactFullName())
+                .contactTitle(p.getContactTitle())
+                .contactPhone(p.getContactPhone())
+                .aboutPharmacy(p.getAboutPharmacy())
+                .openingHoursJson(p.getOpeningHoursJson())
+                .streetAddress(loc != null ? loc.getStreetAddress() : null)
+                .city(loc != null ? loc.getCity() : null)
+                .state(loc != null ? loc.getState() : null)
+                .zipCode(loc != null ? loc.getZipCode() : null)
+                .country(loc != null ? loc.getCountry() : null)
+                .latitude(loc != null ? loc.getLatitude() : null)
+                .longitude(loc != null ? loc.getLongitude() : null)
+                .status(p.getStatus() != null ? p.getStatus().name() : null)
+                .build();
+    }
+
     @GetMapping("/me")
     public ApiResponse me(HttpServletRequest request) {
         User user = requireLoggedInUser(request);
         Pharmacy pharmacy = requireMyPharmacy(user);
-        return new ApiResponse(true, "OK", pharmacy);
+
+        PharmacyLocation loc = pharmacyLocationRepository.findByPharmacy(pharmacy).orElse(null);
+        return new ApiResponse(true, "OK", toResponse(pharmacy, loc));
     }
 
-
-    // ✅ Update ONLY editable fields
     @PatchMapping("/me")
-    public ApiResponse updateMe(@RequestBody com.example.backend.dto.request.UpdatePharmacyMeRequest req,
-                                HttpServletRequest request) {
+    public ApiResponse updateMe(@RequestBody UpdatePharmacyMeRequest req, HttpServletRequest request) {
+        User user = requireLoggedInUser(request);
+        Pharmacy pharmacy = requireMyPharmacy(user);
 
-        var session = request.getSession(false);
-        if (session == null) throw new RuntimeException("Not logged in");
-
-        Integer userId = (Integer) session.getAttribute("USER_ID");
-        if (userId == null) throw new RuntimeException("Not logged in");
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Pharmacy pharmacy = pharmacyRepository.findByEmail(user.getUsername())
-                .orElseThrow(() -> new RuntimeException("Pharmacy not found"));
-
-        // ✅ Update only allowed fields (null-safe)
+        // update pharmacy editable fields
         if (req.getContactFullName() != null) pharmacy.setContactFullName(req.getContactFullName());
         if (req.getContactTitle() != null) pharmacy.setContactTitle(req.getContactTitle());
         if (req.getContactPhone() != null) pharmacy.setContactPhone(req.getContactPhone());
@@ -78,8 +96,30 @@ public class PharmacyMeController {
 
         pharmacyRepository.save(pharmacy);
 
-        return new ApiResponse(true, "Profile updated", pharmacy);
+        // update/create location row if any location field is provided
+        boolean locationTouched =
+                req.getStreetAddress() != null || req.getCity() != null || req.getState() != null ||
+                        req.getZipCode() != null || req.getCountry() != null ||
+                        req.getLatitude() != null || req.getLongitude() != null;
+
+        PharmacyLocation loc = pharmacyLocationRepository.findByPharmacy(pharmacy).orElse(null);
+
+        if (locationTouched) {
+            if (loc == null) {
+                loc = PharmacyLocation.builder().pharmacy(pharmacy).build();
+            }
+            if (req.getStreetAddress() != null) loc.setStreetAddress(req.getStreetAddress());
+            if (req.getCity() != null) loc.setCity(req.getCity());
+            if (req.getState() != null) loc.setState(req.getState());
+            if (req.getZipCode() != null) loc.setZipCode(req.getZipCode());
+            if (req.getCountry() != null) loc.setCountry(req.getCountry());
+            if (req.getLatitude() != null) loc.setLatitude(req.getLatitude());
+            if (req.getLongitude() != null) loc.setLongitude(req.getLongitude());
+
+            pharmacyLocationRepository.save(loc);
+        }
+
+        PharmacyLocation latestLoc = pharmacyLocationRepository.findByPharmacy(pharmacy).orElse(null);
+        return new ApiResponse(true, "Profile updated", toResponse(pharmacy, latestLoc));
     }
-
-
 }

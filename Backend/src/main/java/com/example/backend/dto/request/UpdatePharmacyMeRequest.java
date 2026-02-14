@@ -23,4 +23,26 @@ public class UpdatePharmacyMeRequest {
     private String aboutPharmacy;
 
     private String openingHoursJson;
+
+    @Size(max = 200)
+    private String address;
+
+    @Size(max = 200)
+    private String streetAddress;
+
+    @Size(max = 30)
+    private String city;
+
+    @Size(max = 30)
+    private String state;
+
+    @Size(max = 10)
+    private String zipCode;
+
+    @Size(max = 30)
+    private String country;
+
+    private Double latitude;
+    private Double longitude;
+
 }

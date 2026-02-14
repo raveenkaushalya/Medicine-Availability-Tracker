@@ -50,9 +50,6 @@ public class Pharmacy {
     private LocalDate declarationDate;
     private boolean agreedToDeclaration;
 
-    private Double latitude;
-    private Double longitude;
-
 
     @Column(columnDefinition = "TEXT")
     private String aboutPharmacy;         // About your pharmacy

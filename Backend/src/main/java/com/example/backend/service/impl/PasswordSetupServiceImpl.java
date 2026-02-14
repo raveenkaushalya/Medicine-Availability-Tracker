@@ -3,8 +3,10 @@ package com.example.backend.service.impl;
 import com.example.backend.dto.request.SetPasswordRequest;
 import com.example.backend.entity.PasswordSetupToken;
 import com.example.backend.entity.Pharmacy;
+import com.example.backend.entity.PharmacyLocation;
 import com.example.backend.entity.User;
 import com.example.backend.repository.PasswordSetupTokenRepository;
+import com.example.backend.repository.PharmacyLocationRepository;
 import com.example.backend.repository.PharmacyRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.PasswordSetupService;
@@ -18,18 +20,19 @@ import java.time.LocalDateTime;
 
 @Service
 public class PasswordSetupServiceImpl implements PasswordSetupService {
-
+    private final PharmacyLocationRepository pharmacyLocationRepository;
     private final PasswordSetupTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final PharmacyRepository pharmacyRepository;
     private final PasswordEncoder passwordEncoder;
 
     public PasswordSetupServiceImpl(
-            PasswordSetupTokenRepository tokenRepository,
+            PharmacyLocationRepository pharmacyLocationRepository, PasswordSetupTokenRepository tokenRepository,
             UserRepository userRepository,
             PharmacyRepository pharmacyRepository,   // ✅ NEW
             PasswordEncoder passwordEncoder
     ) {
+        this.pharmacyLocationRepository = pharmacyLocationRepository;
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.pharmacyRepository = pharmacyRepository; // ✅ NEW
@@ -79,9 +82,16 @@ public class PasswordSetupServiceImpl implements PasswordSetupService {
         Pharmacy pharmacy = pharmacyRepository.findByEmail(user.getUsername())
                 .orElseThrow(() -> new RuntimeException("Pharmacy record not found for this account!"));
 
-        pharmacy.setLatitude(req.getLatitude());
-        pharmacy.setLongitude(req.getLongitude());
-        pharmacyRepository.save(pharmacy);
+        PharmacyLocation loc = pharmacyLocationRepository.findByPharmacy(pharmacy).orElse(null);
+        if (loc == null) {
+            loc = PharmacyLocation.builder()
+                    .pharmacy(pharmacy)
+                    .build();
+        }
+        loc.setLatitude(req.getLatitude());
+        loc.setLongitude(req.getLongitude());
+        pharmacyLocationRepository.save(loc);
+
 
         // Mark token used
         token.setUsedAt(LocalDateTime.now());

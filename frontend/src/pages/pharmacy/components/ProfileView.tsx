@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+
 import { useEffect, useState } from "react";
 import {
   User,
@@ -10,8 +11,10 @@ import {
   Save,
   Building,
   Globe,
+  Telescope,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import MapPicker from "./MapPicker";
 
 type ProfileViewProps = {
   pharmacy: any;
@@ -32,10 +35,13 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
     established: "",
 
     address: "",
+    streetAddress: "",
     city: "",
     state: "",
     zipCode: "",
     country: "",
+    latitude: null,
+    longitude: null,
 
     contactPersonName: "",
     contactPersonTitle: "",
@@ -55,26 +61,33 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
 
     setProfile((prev: any) => ({
       ...prev,
-      pharmacyName:pharmacy.legalEntityName ?? pharmacy.tradeName ??  prev.pharmacyName,
-ownerName: pharmacy.ownerName ?? pharmacy.contactFullName ?? prev.ownerName,
-email: pharmacy.email ?? prev.email,
-website: pharmacy.website ?? prev.website,
-licenseNumber: pharmacy.nmraLicense ?? pharmacy.licenseNumber ?? prev.licenseNumber,
-businessRegNumber: pharmacy.businessRegNumber ?? prev.businessRegNumber,
-established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
+      pharmacyName:
+        pharmacy.tradeName && pharmacy.tradeName.trim() !== ""
+          ? pharmacy.tradeName
+          : (pharmacy.legalEntityName ?? prev.pharmacyName),
+
+      ownerName:
+        pharmacy.ownerName ?? pharmacy.contactFullName ?? prev.ownerName,
+      email: pharmacy.email ?? prev.email,
+      licenseNumber:
+        pharmacy.nmraLicense ?? pharmacy.licenseNumber ?? prev.licenseNumber,
+      businessRegNumber: pharmacy.businessRegNo ?? prev.businessRegNo,
+      established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
 
       // Location
-      address: pharmacy.addressInSriLanka || prev.address,
+      address: pharmacy.addressInSriLanka ?? prev.address,
+      streetAddress: pharmacy.streetAddress ?? prev.streetAddress,
       city: pharmacy.city || prev.city,
       state: pharmacy.state || prev.state,
       zipCode: pharmacy.zipCode || prev.zipCode,
       country: pharmacy.country || prev.country,
+      latitude: pharmacy.latitude ?? prev.latitude,
+      longitude: pharmacy.longitude ?? prev.longitude,
 
       contactPersonName: pharmacy.contactFullName ?? prev.contactPersonName,
       contactPersonTitle: pharmacy.contactTitle ?? prev.contactPersonTitle,
       contactPersonPhone: pharmacy.contactPhone ?? prev.contactPersonPhone,
-      pharmacyPhoneNumber:
-        pharmacy.telephone ?? prev.telephone,
+      pharmacyPhoneNumber: pharmacy.telephone ?? prev.telephone,
       description: pharmacy.aboutPharmacy ?? prev.description,
 
       operatingHours: (() => {
@@ -97,6 +110,25 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
     }));
   }, [pharmacy]);
 
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation not supported");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setProfile((p: any) => ({
+          ...p,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }));
+      },
+      () => alert("Location permission denied. Please pin on the map."),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
+
   const handleSave = async () => {
     try {
       const openingHoursJson = JSON.stringify(profile.operatingHours);
@@ -107,9 +139,17 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
           contactFullName: profile.contactPersonName,
           contactTitle: profile.contactPersonTitle,
           contactPhone: profile.contactPersonPhone,
-          pharmacyPhoneNumber: profile.pharmacyPhoneNumber,
+          telephone: profile.pharmacyPhoneNumber,
           openingHoursJson,
           aboutPharmacy: profile.description,
+          addressInSriLanka: profile.address,
+          streetAddress: profile.streetAddress,
+          city: profile.city,
+          state: profile.state,
+          zipCode: profile.zipCode,
+          country: profile.country,
+          latitude: profile.latitude,
+          longitude: profile.longitude,
         }),
       });
 
@@ -218,20 +258,22 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
               Contact Person Name
             </label>
             {isEditing ? (
-  <input
-    type="text"
-    value={profile.contactPersonName || ""}
-    onChange={(e) =>
-      setProfile((p: any) => ({ ...p, contactPersonName: e.target.value }))
-    }
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-  />
-) : (
-  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-    {profile.contactPersonName || "-"}
-  </div>
-)}
-
+              <input
+                type="text"
+                value={profile.contactPersonName || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({
+                    ...p,
+                    contactPersonName: e.target.value,
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                {profile.contactPersonName || "-"}
+              </div>
+            )}
           </div>
 
           {/* Contact Person Title */}
@@ -240,20 +282,22 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
               Contact Person Title
             </label>
             {isEditing ? (
-  <input
-    type="text"
-    value={profile.contactPersonTitle || ""}
-    onChange={(e) =>
-      setProfile((p: any) => ({ ...p, contactPersonTitle: e.target.value }))
-    }
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-  />
-) : (
-  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-    {profile.contactPersonTitle || "-"}
-  </div>
-)}
-
+              <input
+                type="text"
+                value={profile.contactPersonTitle || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({
+                    ...p,
+                    contactPersonTitle: e.target.value,
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                {profile.contactPersonTitle || "-"}
+              </div>
+            )}
           </div>
 
           {/* Contact Person Phone */}
@@ -262,20 +306,22 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
               Contact Person Phone
             </label>
             {isEditing ? (
-  <input
-    type="text"
-    value={profile.contactPersonPhone || ""}
-    onChange={(e) =>
-      setProfile((p: any) => ({ ...p, contactPersonPhone: e.target.value }))
-    }
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-  />
-) : (
-  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-    {profile.contactPersonPhone || "-"}
-  </div>
-)}
-
+              <input
+                type="text"
+                value={profile.contactPersonPhone || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({
+                    ...p,
+                    contactPersonPhone: e.target.value,
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                {profile.contactPersonPhone || "-"}
+              </div>
+            )}
           </div>
 
           <div>
@@ -283,20 +329,22 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
               Pharmacy Phone Number
             </label>
             {isEditing ? (
-  <input
-    type="text"
-    value={profile.pharmacyPhoneNumber || ""}
-    onChange={(e) =>
-      setProfile((p: any) => ({ ...p, pharmacyPhoneNumber: e.target.value }))
-    }
-    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-  />
-) : (
-  <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-    {profile.pharmacyPhoneNumber || "-"}
-  </div>
-)}
-
+              <input
+                type="text"
+                value={profile.pharmacyPhoneNumber || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({
+                    ...p,
+                    pharmacyPhoneNumber: e.target.value,
+                  }))
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                {profile.pharmacyPhoneNumber || "-"}
+              </div>
+            )}
           </div>
 
           <div>
@@ -308,8 +356,6 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
               {profile.email}
             </div>
           </div>
-
-          
 
           <div>
             <label className="block text-gray-700 mb-2 text-sm">
@@ -348,48 +394,162 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
             <p className="text-gray-500 text-sm">Your pharmacy address</p>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Address (editable) */}
           <div className="md:col-span-2">
             <label className="block text-gray-700 mb-2">Address</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-              {profile.address}
-            </div>
+            {isEditing ? (
+              <input
+                className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                value={profile.address || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({
+                    ...p,
+                    address: e.target.value,
+                  }))
+                }
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                {profile.address || "text"}
+              </div>
+            )}
           </div>
-          
+
+          {/* Street Address (editable) */}
           <div className="md:col-span-2">
             <label className="block text-gray-700 mb-2">Street Address</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-              {profile.address}
-            </div>
+            {isEditing ? (
+              <input
+                className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                value={profile.streetAddress || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({
+                    ...p,
+                    streetAddress: e.target.value,
+                  }))
+                }
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                {profile.streetAddress || "-"}
+              </div>
+            )}
           </div>
 
+          {/* City */}
           <div>
             <label className="block text-gray-700 mb-2">City</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-              {profile.city}
-            </div>
+            {isEditing ? (
+              <input
+                className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                value={profile.city || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({ ...p, city: e.target.value }))
+                }
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                {profile.city || "-"}
+              </div>
+            )}
           </div>
 
+          {/* State */}
           <div>
             <label className="block text-gray-700 mb-2">State</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-              {profile.state}
-            </div>
+            {isEditing ? (
+              <input
+                className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                value={profile.state || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({ ...p, state: e.target.value }))
+                }
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                {profile.state || "-"}
+              </div>
+            )}
           </div>
 
+          {/* ZIP Code */}
           <div>
             <label className="block text-gray-700 mb-2">ZIP Code</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-              {profile.zipCode}
-            </div>
+            {isEditing ? (
+              <input
+                className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                value={profile.zipCode || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({ ...p, zipCode: e.target.value }))
+                }
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                {profile.zipCode || "-"}
+              </div>
+            )}
           </div>
 
+          {/* Country */}
           <div>
             <label className="block text-gray-700 mb-2">Country</label>
-            <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-              {profile.country}
+            {isEditing ? (
+              <input
+                className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                value={profile.country || ""}
+                onChange={(e) =>
+                  setProfile((p: any) => ({ ...p, country: e.target.value }))
+                }
+              />
+            ) : (
+              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                {profile.country || "-"}
+              </div>
+            )}
+          </div>
+
+          {/* Map + GPS */}
+          <div className="md:col-span-2 mt-2">
+            {isEditing && (
+              <button
+                type="button"
+                onClick={useMyLocation}
+                className="w-full px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 mb-3"
+              >
+                📍 Use my current location (GPS)
+              </button>
+            )}
+
+            <div className="text-gray-500 text-sm mb-2">
+              {isEditing
+                ? "Click the map to pin location (drag marker too)."
+                : "Pinned location"}
             </div>
+
+            <MapPicker
+              initial={
+                profile.latitude != null && profile.longitude != null
+                  ? { lat: profile.latitude, lng: profile.longitude }
+                  : undefined
+              }
+              onPick={(lat, lng) => {
+                if (!isEditing) return;
+                setProfile((p: any) => ({
+                  ...p,
+                  latitude: lat,
+                  longitude: lng,
+                }));
+              }}
+            />
+
+            {profile.latitude != null && profile.longitude != null && (
+              <div className="text-xs mt-2 text-gray-700">
+                Selected: {Number(profile.latitude).toFixed(6)},{" "}
+                {Number(profile.longitude).toFixed(6)}
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -476,20 +636,19 @@ established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
         </div>
 
         {isEditing ? (
-  <textarea
-    value={profile.description || ""}
-    onChange={(e) =>
-      setProfile((p: any) => ({ ...p, description: e.target.value }))
-    }
-    rows={4}
-    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-  />
-) : (
-  <div className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-    {profile.description || "-"}
-  </div>
-)}
-
+          <textarea
+            value={profile.description || ""}
+            onChange={(e) =>
+              setProfile((p: any) => ({ ...p, description: e.target.value }))
+            }
+            rows={4}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+          />
+        ) : (
+          <div className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+            {profile.description || "-"}
+          </div>
+        )}
       </motion.div>
     </div>
   );
