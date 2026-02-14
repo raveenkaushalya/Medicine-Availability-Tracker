@@ -7,7 +7,7 @@ The system provides real-time stock visibility, price transparency, and powerful
 
 This project was developed as part of the DEA (Development of Enterprise Applications) Module.
 
-⸻
+
 
 Key Features
 
@@ -34,7 +34,7 @@ Admin / Super Admin
 	•	Role-based access control
 	•	System configuration panel
 
-⸻
+
 
 Technology Stack
 
@@ -53,7 +53,7 @@ Backend
 	•	RESTful APIs
 	•	Relational Database
 
-⸻
+
 
 System Architecture
 
@@ -63,7 +63,7 @@ The backend follows a Layered Architecture:
 	•	Repository Layer – Database interactions
 	•	DTO Layer – Data transfer & validation
 
-⸻
+
 
 Security Features
 	•	Role-Based Access Control (RBAC)
@@ -73,7 +73,6 @@ Security Features
 	•	CORS Configuration
 	•	Session Management
 
-⸻
 
 Core Functionalities
 	•	Pharmacy Registration & Verification
@@ -83,7 +82,7 @@ Core Functionalities
 	•	Error Handling & Standardized API Responses
 	•	Configuration Management
 
-⸻
+
 
 API Endpoints
 
@@ -103,7 +102,7 @@ Endpoint	Method	Description
 /api/v1/admin/pharmacies	GET/PUT	Verify Pharmacies
 
 
-⸻
+
 
 Future Enhancements
 	•	Google Maps Integration
@@ -118,7 +117,7 @@ Future Enhancements
 	•	WebSockets for Live Updates
 	•	Microservices Architecture
 
-⸻
+
 
 Project Goals
 	•	Improve medicine accessibility
@@ -127,18 +126,18 @@ Project Goals
 	•	Support emergency medicine search
 	•	Deliver scalable healthcare solutions
 
-⸻
+
 
 Conclusion
 
 Pharmora bridges the gap between patients and pharmacies by offering a reliable, real-time, and user-friendly platform for medicine discovery and management. With secure architecture, modern technologies, and scalable design, the system is built to evolve and support the growing healthcare ecosystem in Sri Lanka.
 
-⸻
+
 
 License
 
 This project is developed for academic purposes under the DEA module.
 You may modify and extend it for learning and research.
-⸻
+
 
 End of README
