@@ -136,6 +136,6 @@ Pharmora bridges the gap between patients and pharmacies by offering a reliable,
 This project is developed for academic purposes under the DEA module.  
 You may modify and extend it for learning and research.
 
----
+
 
 
