@@ -29,12 +29,13 @@ export const router = createBrowserRouter([
 
   // ✅ ADD THIS (Pharmacy Set Password page)
   {
-    path: "/pharmacy/set-password",
-    async lazy() {
-      const { PharmacySetPassword } = await import("./pages/pharmacy/PharmacySetPassword");
-      return { Component: PharmacySetPassword };
-    },
+  path: "/pharmacy/set-password",
+  async lazy() {
+    const module = await import("./pages/pharmacy/PharmacySetPassword");
+    return { Component: module.default };
   },
+},
+
 
   {
     path: "*",
