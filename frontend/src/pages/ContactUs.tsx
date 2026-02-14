@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { Mail, Phone, Facebook, Globe } from 'lucide-react';
 import { useState } from 'react';
-// import emailjs from 'emailjs-com';
+import emailjs from '@emailjs/browser';
 
 interface ContactUsProps {
   onPageChange?: (page: string) => void;
@@ -27,10 +27,6 @@ export function ContactUs({ onPageChange }: ContactUsProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.inquiryType || formData.inquiryType === 'general') {
-      setError('Please select an inquiry type.');
-      return;
-    }
     setSending(true);
     setError(null);
     setSubmitted(false);
