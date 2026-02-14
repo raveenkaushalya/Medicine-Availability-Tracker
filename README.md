@@ -138,7 +138,4 @@ You may modify and extend it for learning and research.
 
 ---
 
-## Contributors
-- DEA Module Project Team
 
----
