@@ -70,16 +70,18 @@
       target: 'esnext',
       outDir: 'build',
     },
+
     server: {
-  port: 3000,
-  open: true,
-  proxy: {
-    "/api": {
-      target: "http://localhost:8080",
-      changeOrigin: true,
-      secure: false,
+      port: 3000,
+      open: true,
+      proxy: {
+        "/api": {
+          target: "http://localhost:8080",
+          changeOrigin: true,
+          secure: false,
+        },
+      },
+      // Enable SPA fallback for client-side routing
     },
-  },
-},
 
   });

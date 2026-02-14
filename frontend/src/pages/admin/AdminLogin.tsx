@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import logoImage from '../../assets/images/logo.png';
 import { useNavigate } from 'react-router';
-import { apiFetch } from "../../utils/api"; // ✅ ADD
+import { apiFetch } from "../../utils/api"; // ADD
 
 export function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [securityKey, setSecurityKey] = useState(''); // ✅ ADD
-  const [error, setError] = useState<string | null>(null); // ✅ ADD
-  const [loading, setLoading] = useState(false); // ✅ ADD
+  const [securityKey, setSecurityKey] = useState(''); // ADD
+  const [error, setError] = useState<string | null>(null); // ADD
+  const [loading, setLoading] = useState(false); // ADD
 
   const navigate = useNavigate();
 
@@ -19,18 +19,18 @@ export function AdminLogin() {
     setLoading(true);
 
     try {
-      // ✅ call backend login
+      // call backend login
       await apiFetch("/api/v1/auth/login", {
         method: "POST",
         body: JSON.stringify({
-        email: email,           // ✅ use the input email
+        email: email,           // use the input email
         password: password,
         securityKey: securityKey,
       }),
 
       });
 
-      // ✅ success
+      // success
       navigate("/admin/dashboard");
     } catch (err: any) {
       setError(err.message || "Login failed");
@@ -59,7 +59,7 @@ export function AdminLogin() {
           <h1 className="text-gray-800 text-lg sm:text-xl font-semibold mt-3">Pharmora Admin Portal</h1>
         </div>
 
-        {/* ✅ show error */}
+        {/* show error */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded mb-4">
             {error}
