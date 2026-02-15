@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.response.MedicineMasterDto;
 import com.example.backend.dto.response.MedicineSuggestResponse;
 import com.example.backend.entity.MedicineMaster;
 import com.example.backend.service.MedicineCatalogService;
@@ -12,6 +13,12 @@ import java.util.List;
 @RequestMapping("/api/medicines")
 @RequiredArgsConstructor
 public class MedicineCatalogController {
+
+    // Public endpoint: get all medicines (read-only)
+    @GetMapping("/all")
+    public List<MedicineMasterDto> getAll() {
+        return medicineCatalogService.getAll();
+    }
 
     private final MedicineCatalogService medicineCatalogService;
 

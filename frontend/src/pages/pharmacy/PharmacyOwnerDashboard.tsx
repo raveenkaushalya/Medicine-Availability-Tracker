@@ -93,31 +93,47 @@ const pharmacyName = pharmacy?.tradeName || pharmacy?.legalEntityName || "Pharma
     setSidebarOpen(prev => !prev);
   }, []);
 
+  // Medicine database state
+  const [medicineDatabase, setMedicineDatabase] = useState([]);
+
+  useEffect(() => {
+    // Fetch all medicines from new public endpoint
+    const fetchAllMedicines = async () => {
+      try {
+        const res = await apiFetch('/api/medicines/all');
+        setMedicineDatabase(res);
+      } catch (e) {
+        setMedicineDatabase([]);
+      }
+    };
+    fetchAllMedicines();
+  }, []);
+
   // Memoize the rendered view for performance
-const renderedView = useMemo(() => {
-  switch (activeView) {
-    case "inventory":
-      return <InventoryView />;
+  const renderedView = useMemo(() => {
+    switch (activeView) {
+      case "inventory":
+        return <InventoryView medicineDatabase={medicineDatabase} />;
 
-    case "settings":
-      return <SettingsView />;
+      case "settings":
+        return <SettingsView />;
 
-    case "profile":
-    case "profileview":
-      return (
-        <ProfileView
-          pharmacy={pharmacy}
-          onRefresh={async () => {
-            const res = await apiFetch("/api/v1/pharmacies/me");
-            setPharmacy(res.data);
-          }}
-        />
-      );
+      case "profile":
+      case "profileview":
+        return (
+          <ProfileView
+            pharmacy={pharmacy}
+            onRefresh={async () => {
+              const res = await apiFetch("/api/v1/pharmacies/me");
+              setPharmacy(res.data);
+            }}
+          />
+        );
 
-    default:
-      return <InventoryView />;
-  }
-  }, [activeView, inventory, handleAddToInventory, handleUpdateInventory, handleRemoveFromInventory]);
+      default:
+        return <InventoryView medicineDatabase={medicineDatabase} />;
+    }
+  }, [activeView, inventory, handleAddToInventory, handleUpdateInventory, handleRemoveFromInventory, medicineDatabase]);
 
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { SearchableSelect } from '../../../components/SearchableSelect';
 import { apiFetch } from "../../../utils/api";
 import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 
@@ -16,7 +17,7 @@ type InventoryRow = {
   price: number;
 };
 
-export function InventoryView() {
+export function InventoryView(props: { medicineDatabase: any[] }) {
   const [rows, setRows] = useState<InventoryRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -338,62 +339,15 @@ export function InventoryView() {
             {!editId && (
               <div className="mb-4">
                 <label className="text-sm text-gray-700">Select Medicine</label>
-                <input
-                  value={modalQuery}
-                  onChange={(e) => {
-                    setModalQuery(e.target.value);
-                    setShowModalSug(true);
+                <SearchableSelect
+                  medicines={props.medicineDatabase || []}
+                  value={selectedMed?.id || ''}
+                  onChange={id => {
+                    const med = (props.medicineDatabase || []).find(m => m.id === id);
+                    setSelectedMed(med);
                   }}
-                  onFocus={() => setShowModalSug(true)}
-                  onBlur={() => setTimeout(() => setShowModalSug(false), 120)}
-                  placeholder="Search medicine..."
-                  className="w-full mt-2 px-3 py-2 border rounded-lg"
+                  label={undefined}
                 />
-
-                {showModalSug && modalQuery.trim().length >= 2 && (
-                  <div
-                    className="mt-2 w-full border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-auto"
-                    style={{
-                      backgroundColor: "#fff",
-                      color: "#111827",
-                      WebkitTextFillColor: "#111827",
-                      opacity: 1,
-                    }}
-                  >
-                    {modalSuggestions.length === 0 ? (
-                      <div
-                        className="px-4 py-3 text-sm"
-                        style={{
-                          color: "#6B7280",
-                          WebkitTextFillColor: "#6B7280",
-                          opacity: 1,
-                        }}
-                      >
-                        No suggestions
-                      </div>
-                    ) : (
-                      modalSuggestions.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className="w-full px-4 py-3 text-left hover:bg-gray-50 text-sm"
-                          style={{
-                            backgroundColor: "#fff",
-                            color: "#111827",
-                            WebkitTextFillColor: "#111827", // ✅ this fixes “invisible text”
-                            opacity: 1,
-                          }}
-                          onMouseDown={(e) => {
-                            e.preventDefault(); // keep focus behaviour stable
-                            selectMedicine(s.id); // ✅ select + close dropdown
-                          }}
-                        >
-                          {s.label || s.name}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
               </div>
             )}
 

@@ -1043,8 +1043,8 @@ export function AdminDashboard() {
 
   const renderMedicineDatabase = () => (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="flex gap-2 flex-wrap items-center">
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+        <div className="flex flex-1 gap-2 flex-wrap items-center min-w-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -1095,65 +1095,46 @@ export function AdminDashboard() {
 
           <div className="flex gap-2 items-center">
             <Filter className="w-4 h-4 text-gray-400" />
-            <select
-              value={filterStatus}
-              onChange={(e) => {
-                setFilterStatus(e.target.value as any);
-                loadMedicines({ page: 0, q: medQ });
-              }}
-              className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              title="Filter by status"
-            >
-              <option value="">All Status</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="ARCHIVED">INACTIVE</option>
-            </select>
-
-            <select
-              value={filterManufacturer}
-              onChange={(e) => {
-                setFilterManufacturer(e.target.value);
-                loadMedicines({ page: 0, q: medQ });
-              }}
-              className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              title="Filter by manufacturer"
-            >
-              <option value="">All Manufacturers</option>
-              {Array.from(
-                new Set(medicines.map((m) => m.manufacturer).filter(Boolean)),
-              ).map((manu, idx) => (
-                <option key={idx} value={manu as string}>
-                  {manu as string}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={filterBrand}
-              onChange={(e) => {
-                setFilterBrand(e.target.value);
-                loadMedicines({ page: 0, q: medQ });
-              }}
-              className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              title="Filter by brand name"
-            >
-              <option value="">All Brand Names</option>
-              {Array.from(
-                new Set(medicines.map((m) => m.brandName).filter(Boolean)),
-              ).map((brand, idx) => (
-                <option key={idx} value={brand}>
-                  {brand}
-                </option>
-              ))}
-            </select>
+            {(() => {
+              let selectValue = "";
+              if (filterStatus === "ACTIVE") selectValue = "ACTIVE";
+              else if (filterStatus === "ARCHIVED") selectValue = "INACTIVE";
+              else selectValue = "";
+              return (
+                <select
+                  value={selectValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "ACTIVE") {
+                      setFilterStatus("ACTIVE");
+                      loadMedicines({ page: 0, q: medQ });
+                    } else if (val === "INACTIVE") {
+                      setFilterStatus("ARCHIVED");
+                      loadMedicines({ page: 0, q: medQ });
+                    } else {
+                      setFilterStatus("");
+                      loadMedicines({ page: 0, q: medQ });
+                    }
+                  }}
+                  className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  title="Filter by status"
+                >
+                  <option value="">All Status</option>
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="INACTIVE">INACTIVE</option>
+                </select>
+              );
+            })()}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center sm:items-end justify-end min-w-[140px]">
           <button
-            className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-sm"
+            className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-150"
+            style={{ minWidth: 140, height: 40 }}
             onClick={() => openMedicineModal()}
           >
-            <Plus className="w-4 h-4" /> Add Medicine
+            <Plus className="w-4 h-4" />
+            <span className="font-semibold">Add Medicine</span>
           </button>
         </div>
       </div>
@@ -1317,15 +1298,24 @@ export function AdminDashboard() {
                     {med.regNo || "RX-12345"}
                   </td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <button
+                      className={`px-3 py-1 rounded-full text-xs font-semibold focus:outline-none transition-all duration-150 shadow-sm ${
                         med.status === "ACTIVE"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-gray-800"
+                          ? "bg-green-100 text-green-800 border border-green-200 hover:bg-green-200"
+                          : "bg-red-100 text-red-800 border border-red-200 hover:bg-red-200"
                       }`}
+                      title={med.status === "ACTIVE" ? "Set as INACTIVE" : "Set as ACTIVE"}
+                      onClick={async () => {
+                        const newStatus = med.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE";
+                        await apiFetch(`/api/v1/admin/medicines/${med.id}`, {
+                          method: "PUT",
+                          body: JSON.stringify({ ...med, status: newStatus }),
+                        });
+                        await loadMedicines({ page: medPage, q: medQ });
+                      }}
                     >
-                      {med.status}
-                    </span>
+                      {med.status === "ACTIVE" ? "ACTIVE" : "INACTIVE"}
+                    </button>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex gap-2 justify-end">

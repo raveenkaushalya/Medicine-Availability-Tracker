@@ -1,18 +1,24 @@
 package com.example.backend.bootstrap;
 
-import com.example.backend.entity.MedicineMaster;
-import com.example.backend.repository.MedicineMasterRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Component;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import com.opencsv.CSVReader;
+import java.io.Reader;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Component;
+
+import com.example.backend.entity.MedicineMaster;
+import com.example.backend.repository.MedicineMasterRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
@@ -33,63 +39,50 @@ public class MedicineCatalogImporter implements CommandLineRunner {
         Set<String> seenRegNos = new HashSet<>();
 
         var resource = new ClassPathResource("data/medicine_master.csv");
-
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
-
-            // skip header
-            String header = br.readLine();
+        try (Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8);
+             CSVReader csvReader = new CSVReader(reader)) {
+            String[] header = csvReader.readNext();
             if (header == null) return;
-
             List<MedicineMaster> batch = new ArrayList<>(500);
-            String line;
-
             int skippedDuplicates = 0;
             int importedCount = 0;
-
-            while ((line = br.readLine()) != null) {
-
-                String[] c = line.split(",", -1);
-
-                String regNo = clean(c, 0);
+            String[] c;
+            while ((c = csvReader.readNext()) != null) {
+                if (c.length < 6) continue; // skip incomplete rows
+                String genericName = clean(c, 0);
+                String brandName = clean(c, 1);
+                String manufacturer = clean(c, 2);
+                String country = clean(c, 3);
+                String regNo = clean(c, 4);
+                if (regNo != null && regNo.length() > 50) {
+                    System.out.println("⚠️ regNo truncated: " + regNo);
+                    regNo = regNo.substring(0, 50);
+                }
+                String dosage = clean(c, 5);
                 if (regNo == null) continue;
-
-                // ✅ Skip duplicate reg_no rows inside CSV
                 if (!seenRegNos.add(regNo)) {
                     skippedDuplicates++;
                     continue;
                 }
-
                 MedicineMaster m = new MedicineMaster();
+                m.setGenericName(genericName);
+                m.setBrandName(brandName);
+                m.setManufacturer(manufacturer);
+                m.setCountry(country);
                 m.setRegNo(regNo);
-                m.setGenericName(clean(c, 1));
-                m.setBrandName(clean(c, 2));
-                m.setDosage(clean(c, 3));
-                m.setPackSize(clean(c, 4));
-                m.setPackType(clean(c, 5));
-                m.setManufacturer(clean(c, 6));
-                m.setCountry(clean(c, 7));
-                m.setAgent(clean(c, 8));
-                m.setRegDate(parseDate(clean(c, 9)));
-                m.setSchedule(clean(c, 10));
-                m.setValidation(clean(c, 11));
-                m.setDossierNo(clean(c, 12));
-
+                m.setDosage(dosage);
                 batch.add(m);
-
                 if (batch.size() == 500) {
                     medicineRepo.saveAll(batch);
                     importedCount += batch.size();
                     batch.clear();
-                    System.out.println("📥 Imported: " + importedCount + " medicines...");
+                    System.out.println("\ud83d\udce5 Imported: " + importedCount + " medicines...");
                 }
             }
-
             if (!batch.isEmpty()) {
                 medicineRepo.saveAll(batch);
                 importedCount += batch.size();
             }
-
             System.out.println("✅ Imported medicine_master successfully!");
             System.out.println("⚠️ Skipped duplicate reg_no rows: " + skippedDuplicates);
             System.out.println("📊 Final imported count: " + importedCount);

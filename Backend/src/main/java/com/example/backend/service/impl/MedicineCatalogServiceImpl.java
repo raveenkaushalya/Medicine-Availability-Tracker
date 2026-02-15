@@ -13,6 +13,19 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class MedicineCatalogServiceImpl implements MedicineCatalogService {
+    @Override
+    public java.util.List<com.example.backend.dto.response.MedicineMasterDto> getAll() {
+        return medicineRepo.findAll().stream().map(m -> new com.example.backend.dto.response.MedicineMasterDto(
+            m.getId(),
+            m.getGenericName(),
+            m.getBrandName(),
+            m.getManufacturer(),
+            m.getCountry(),
+            m.getRegNo(),
+            m.getStatus() != null ? m.getStatus().name() : null,
+            m.getDosage()
+        )).toList();
+    }
 
     private final MedicineMasterRepository medicineRepo;
 

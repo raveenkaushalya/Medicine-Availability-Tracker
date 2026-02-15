@@ -1,10 +1,15 @@
 package com.example.backend.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(
@@ -20,30 +25,26 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MedicineMaster {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Integer id;
 
-    @Column(nullable = false, unique = true, length = 50)
-    private String regNo;
+        private String genericName;
+        private String brandName;
+        private String manufacturer;
+        private String country;
+        @Column(nullable = false, unique = true, length = 50)
+        private String regNo;
+                private String dosage;
 
-    private String genericName;
-    private String brandName;
-    private String dosage;
-
-    private String packSize;
-    private String packType;
-    private String manufacturer;
-    private String country;
-    private String agent;
-
-    private LocalDate regDate;
-    private String schedule;
-    private String validation;
-    private String dossierNo;
-
-    @Enumerated(EnumType.STRING)
-    private CatalogStatus status = CatalogStatus.ACTIVE;
-
-    private LocalDateTime createdAt = LocalDateTime.now();
+                // CatalogStatus enum for medicine status
+                private CatalogStatus status;
+        
+                public CatalogStatus getStatus() {
+                    return status;
+                }
+        
+                public void setStatus(CatalogStatus status) {
+                    this.status = status;
+                }
 }

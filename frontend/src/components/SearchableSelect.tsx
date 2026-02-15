@@ -2,17 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 
 interface Medicine {
   id: number;
-  name: string;
   genericName?: string;
   brandName?: string;
+  manufacturer?: string;
+  country?: string;
+  regNo?: string;
+  status?: string;
   dosage?: string;
-  category?: string;
 }
 
 interface SearchableSelectProps {
   medicines: Medicine[];
-  value: string;
-  onChange: (value: string) => void;
+  value: string | number;
+  onChange: (value: string | number) => void;
   label?: string;
 }
 
@@ -33,15 +35,10 @@ export function SearchableSelect({ medicines, value, onChange, label }: Searchab
 
   const filtered = medicines.filter(med => {
     const term = search.toLowerCase();
-    return (
-      (med.genericName || med.name || '').toLowerCase().includes(term) ||
-      (med.brandName || '').toLowerCase().includes(term) ||
-      (med.dosage || '').toLowerCase().includes(term) ||
-      (med.category || '').toLowerCase().includes(term)
-    );
+    return (med.genericName || '').toLowerCase().includes(term);
   });
 
-  const selectedMed = medicines.find(med => med.name === value);
+  const selectedMed = medicines.find(med => med.id === value);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -54,7 +51,7 @@ export function SearchableSelect({ medicines, value, onChange, label }: Searchab
         aria-expanded={open}
       >
         {selectedMed
-          ? `${selectedMed.genericName ? selectedMed.genericName : ''}${selectedMed.genericName && selectedMed.brandName ? ' / ' : ''}${selectedMed.brandName ? selectedMed.brandName : ''}${selectedMed.genericName || selectedMed.brandName ? ' - ' : ''}${selectedMed.name}${selectedMed.dosage ? ' - ' + selectedMed.dosage : ''}${selectedMed.category ? ' - ' + selectedMed.category : ''}`
+          ? `${selectedMed.genericName || ''}${selectedMed.genericName && selectedMed.brandName ? ' / ' : ''}${selectedMed.brandName || ''}${selectedMed.genericName || selectedMed.brandName ? ' - ' : ''}${selectedMed.dosage || ''}${selectedMed.manufacturer ? ' - ' + selectedMed.manufacturer : ''}${selectedMed.country ? ' - ' + selectedMed.country : ''}${selectedMed.regNo ? ' - ' + selectedMed.regNo : ''}`
           : 'Select a medicine...'}
       </button>
       {open && (
@@ -74,16 +71,16 @@ export function SearchableSelect({ medicines, value, onChange, label }: Searchab
             {filtered.map(med => (
               <li
                 key={med.id}
-                className={`px-3 py-2 cursor-pointer text-xs sm:text-sm hover:bg-blue-100 ${value === med.name ? 'bg-blue-50 font-semibold' : ''}`}
+                className={`px-3 py-2 cursor-pointer text-xs sm:text-sm hover:bg-blue-100 ${value === med.id ? 'bg-blue-50 font-semibold' : ''}`}
                 onClick={() => {
-                  onChange(med.name);
+                  onChange(med.id);
                   setOpen(false);
                   setSearch('');
                 }}
                 role="option"
-                aria-selected={value === med.name}
+                aria-selected={value === med.id}
               >
-                {med.genericName ? med.genericName : ''}{med.genericName && med.brandName ? ' / ' : ''}{med.brandName ? med.brandName : ''}{med.genericName || med.brandName ? ' - ' : ''}{med.name}{med.dosage ? ' - ' + med.dosage : ''}{med.category ? ' - ' + med.category : ''}
+                {med.genericName}
               </li>
             ))}
           </ul>
