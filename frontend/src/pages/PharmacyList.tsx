@@ -9,11 +9,13 @@ import pharmacyLogo from '../assets/images/logo.png';
 
 interface Drug {
   drugName: string;
+  brandName?: string;
   quantity: number;
   price: number;
   inStock: boolean;
   category: string;
   dosage: string;
+  updatedAt?: string;
 }
 
 interface Pharmacy {
@@ -47,6 +49,20 @@ function getRecentTimestamp() {
 }
 
 export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
+  // Helper to get minutes since update
+  function getMinutesAgo(updatedAt?: string) {
+    if (!updatedAt) return '-';
+    const updated = new Date(updatedAt);
+    if (isNaN(updated.getTime())) return '-';
+    const now = new Date();
+    const diffMs = now.getTime() - updated.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const hours = Math.floor(diffMin / 60);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+
   if (pharmacies.length === 0) {
     return (
       <motion.div
@@ -121,27 +137,98 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                           <Phone className="w-3.5 h-3.5 text-[#0250cf]" />
                           <span className="text-gray-700">{pharmacy.phone}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 relative group cursor-pointer">
                           <Clock className="w-3.5 h-3.5 text-[#0250cf]" />
-                          <span className="text-gray-700">{pharmacy.hours}</span>
+                          {(() => {
+                            // Determine open/closed status based on current time and today's hours
+                            const d = new Date();
+                            const day = d.getDay();
+                            let hours = null;
+                            if (day >= 1 && day <= 5) {
+                              hours = pharmacy.openingHours?.weekdays;
+                            } else if (day === 6) {
+                              hours = pharmacy.openingHours?.saturday;
+                            } else if (day === 0) {
+                              hours = pharmacy.openingHours?.sunday;
+                            }
+                            let isOpen = false;
+                            if (hours && hours.open && hours.close) {
+                              // Parse "HH:mm" to minutes since midnight
+                              const [openH, openM] = hours.open.split(":").map(Number);
+                              const [closeH, closeM] = hours.close.split(":").map(Number);
+                              const nowMins = d.getHours() * 60 + d.getMinutes();
+                              const openMins = openH * 60 + openM;
+                              const closeMins = closeH * 60 + closeM;
+                              if (openMins < closeMins) {
+                                isOpen = nowMins >= openMins && nowMins < closeMins;
+                              } else if (openMins > closeMins) {
+                                // Overnight (e.g. 22:00-06:00)
+                                isOpen = nowMins >= openMins || nowMins < closeMins;
+                              }
+                            }
+                            return (
+                              <span className={`font-semibold ${isOpen ? 'text-green-700' : 'text-red-700'}`}>{isOpen ? 'Open now' : 'Closed'}</span>
+                            );
+                          })()}
+                          {/* Show Mon-Fri, Sat, Sun hours as 3 horizontal labels */}
+                          <div className="flex gap-1 ml-2">
+                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
+                              Mon-Fri: {pharmacy.openingHours?.weekdays?.open && pharmacy.openingHours?.weekdays?.close ? `${pharmacy.openingHours.weekdays.open} - ${pharmacy.openingHours.weekdays.close}` : 'Not set'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
+                              Sat: {pharmacy.openingHours?.saturday?.open && pharmacy.openingHours?.saturday?.close ? `${pharmacy.openingHours.saturday.open} - ${pharmacy.openingHours.saturday.close}` : 'Not set'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
+                              Sun: {pharmacy.openingHours?.sunday?.open && pharmacy.openingHours?.sunday?.close ? `${pharmacy.openingHours.sunday.open} - ${pharmacy.openingHours.sunday.close}` : 'Not set'}
+                            </span>
+                          </div>
+                          {/* Popover for full opening hours (no label) */}
+                          <div className="absolute left-0 top-7 z-20 hidden group-hover:block bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[220px] text-xs text-gray-900">
+                            <div className="font-bold mb-2 text-[#0250cf]">Opening Hours</div>
+                            {pharmacy.openingHours && typeof pharmacy.openingHours === 'object' ? (
+                              <table className="w-full text-left">
+                                <tbody>
+                                  <tr><td className="pr-2">Mon-Fri:</td><td>{pharmacy.openingHours.weekdays?.open && pharmacy.openingHours.weekdays?.close ? `${pharmacy.openingHours.weekdays.open} - ${pharmacy.openingHours.weekdays.close}` : 'Not set'}</td></tr>
+                                  <tr><td className="pr-2">Saturday:</td><td>{pharmacy.openingHours.saturday?.open && pharmacy.openingHours.saturday?.close ? `${pharmacy.openingHours.saturday.open} - ${pharmacy.openingHours.saturday.close}` : 'Not set'}</td></tr>
+                                  <tr><td className="pr-2">Sunday:</td><td>{pharmacy.openingHours.sunday?.open && pharmacy.openingHours.sunday?.close ? `${pharmacy.openingHours.sunday.open} - ${pharmacy.openingHours.sunday.close}` : 'Not set'}</td></tr>
+                                </tbody>
+                              </table>
+                            ) : (
+                              <div>Not available</div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
                     </div>
                   </div>
 
-                  {/* Get Directions Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      const address = encodeURIComponent(pharmacy.address);
-                      window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
-                    }}
-                    className="px-4 py-2 rounded-lg bg-[#0250cf] text-white text-sm hover:bg-[#0240b0] transition-colors shadow-md flex-shrink-0 border border-[#0250cf]"
-                  >
-                    Get Directions
-                  </motion.button>
+                  {/* Get Directions Button & Call Button */}
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`tel:${pharmacy.phone}`}
+                      className="flex items-center justify-center rounded-full bg-transparent w-10 h-10 border border-[#0250cf]/60 transition-colors"
+                      title="Call Pharmacy"
+                      style={{ boxShadow: 'none' }}
+                    >
+                      <Phone className="w-5 h-5" style={{ color: '#0250cf' }} />
+                    </a>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        if (pharmacy.latitude && pharmacy.longitude) {
+                          window.open(`https://www.google.com/maps/search/?api=1&query=${pharmacy.latitude},${pharmacy.longitude}`, '_blank');
+                        } else {
+                          const address = encodeURIComponent(pharmacy.address);
+                          window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-[#0250cf] text-white text-sm hover:bg-[#0240b0] transition-colors shadow-md flex-shrink-0 border border-[#0250cf]"
+                    >
+                      Get Directions
+                    </motion.button>
+                  </div>
                 </div>
               </div>
 
@@ -182,11 +269,22 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                               <img src={medicineIcon} alt="Medication" className="w-full h-full object-contain" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-gray-900 mb-1 truncate">{drug.drugName}</h4>
+                              <h4
+                                className="text-gray-900 mb-1 break-words whitespace-pre-line leading-snug text-base sm:text-lg font-bold"
+                                style={{
+                                  fontSize: drug.drugName.length > 25 ? '1rem' : '1.1rem',
+                                  minHeight: drug.drugName.length > 25 ? '2.4em' : '1.2em',
+                                  maxWidth: '100%',
+                                  wordBreak: 'break-word',
+                                  whiteSpace: 'pre-line',
+                                }}
+                              >
+                                {drug.drugName}
+                              </h4>
                               <div className="flex items-center gap-2 text-sm">
                                 <span className="text-gray-500">{drug.category}</span>
                                 <span className="text-gray-400">•</span>
-                                <span className="text-gray-600 font-medium">{drug.dosage}</span>
+                                <span className="text-gray-600 font-medium">{drug.brandName || '-'}</span>
                               </div>
                             </div>
                           </div>
@@ -201,7 +299,7 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-gray-500 mb-0.5">Updated</p>
-                              <p className="text-xs text-gray-700">{timestamp}</p>
+                              <p className="text-xs text-gray-700">{getMinutesAgo(drug.updatedAt)}</p>
                             </div>
                           </div>
                         </div>

@@ -31,6 +31,7 @@ interface Drug {
   price: number;
   inStock: boolean;
   category: string;
+  updatedAt?: string;
 }
 
 interface Pharmacy {
@@ -45,273 +46,52 @@ interface Pharmacy {
   inventory: Drug[];
 }
 
-interface PharmacyWithMatchingDrugs extends Pharmacy {
-  matchingDrugs?: Drug[];
+
+import { useEffect } from "react";
+import { apiFetch } from "../utils/api";
+
+// API response type for public pharmacy listing
+interface PublicPharmacyAPIResponse {
+  id: number;
+  name: string;
+  address: string;
+  phone: string;
+  hours: string;
+  type: string;
+  isOpen: boolean;
+  inventory: Array<{
+    medicineId: number;
+    drugName: string;
+    brandName?: string;
+    dosage: string;
+    quantity: number;
+    price: number;
+    category: string;
+    inStock: boolean;
+    updatedAt?: string;
+  }>;
+  distance?: string; // Add optional distance for compatibility
 }
 
-// Mock data for pharmacies and their drug inventory
-const pharmacies = [
-  {
-    id: 1,
-    name: "HealthPlus Pharmacy",
-    address: "123 Main Street, Downtown",
-    phone: "+1 (555) 123-4567",
-    hours: "8:00 AM - 10:00 PM",
-    distance: "0.5 miles",
-    type: "Retail Pharmacy",
-    isOpen: true,
-    inventory: [
-      {
-        drugName: "Aspirin",
-        dosage: "500mg",
-        quantity: 150,
-        price: 8.99,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Ibuprofen",
-        dosage: "200mg",
-        quantity: 200,
-        price: 12.99,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Amoxicillin",
-        dosage: "500mg",
-        quantity: 45,
-        price: 24.99,
-        inStock: true,
-        category: "Antibiotic",
-      },
-      {
-        drugName: "Lisinopril",
-        dosage: "10mg",
-        quantity: 0,
-        price: 15.99,
-        inStock: false,
-        category: "Blood Pressure",
-      },
-      {
-        drugName: "Metformin",
-        dosage: "500mg",
-        quantity: 80,
-        price: 18.99,
-        inStock: true,
-        category: "Diabetes",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "CareWell Pharmacy",
-    address: "456 Oak Avenue, Midtown",
-    phone: "+1 (555) 234-5678",
-    hours: "7:00 AM - 11:00 PM",
-    distance: "1.2 miles",
-    type: "Hospital Pharmacy",
-    isOpen: true,
-    inventory: [
-      {
-        drugName: "Aspirin",
-        dosage: "500mg",
-        quantity: 0,
-        price: 9.49,
-        inStock: false,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Ibuprofen",
-        dosage: "200mg",
-        quantity: 120,
-        price: 11.99,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Amoxicillin",
-        dosage: "500mg",
-        quantity: 60,
-        price: 22.99,
-        inStock: true,
-        category: "Antibiotic",
-      },
-      {
-        drugName: "Lisinopril",
-        dosage: "10mg",
-        quantity: 30,
-        price: 14.99,
-        inStock: true,
-        category: "Blood Pressure",
-      },
-      {
-        drugName: "Metformin",
-        dosage: "500mg",
-        quantity: 100,
-        price: 17.99,
-        inStock: true,
-        category: "Diabetes",
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "MediQuick Pharmacy",
-    address: "789 Pine Road, Uptown",
-    phone: "+1 (555) 345-6789",
-    hours: "24 Hours",
-    distance: "2.0 miles",
-    type: "24-Hour Pharmacy",
-    isOpen: true,
-    inventory: [
-      {
-        drugName: "Aspirin",
-        dosage: "500mg",
-        quantity: 300,
-        price: 7.99,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Ibuprofen",
-        dosage: "200mg",
-        quantity: 0,
-        price: 13.49,
-        inStock: false,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Amoxicillin",
-        dosage: "500mg",
-        quantity: 25,
-        price: 25.99,
-        inStock: true,
-        category: "Antibiotic",
-      },
-      {
-        drugName: "Lisinopril",
-        dosage: "10mg",
-        quantity: 50,
-        price: 16.49,
-        inStock: true,
-        category: "Blood Pressure",
-      },
-      {
-        drugName: "Metformin",
-        dosage: "500mg",
-        quantity: 0,
-        price: 19.99,
-        inStock: false,
-        category: "Diabetes",
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "Wellness Pharmacy",
-    address: "321 Elm Street, West Side",
-    phone: "+1 (555) 456-7890",
-    hours: "9:00 AM - 9:00 PM",
-    distance: "2.5 miles",
-    type: "Retail Pharmacy",
-    isOpen: false,
-    inventory: [
-      {
-        drugName: "Aspirin",
-        dosage: "500mg",
-        quantity: 100,
-        price: 8.49,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Ibuprofen",
-        dosage: "200mg",
-        quantity: 180,
-        price: 12.49,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Amoxicillin",
-        dosage: "500mg",
-        quantity: 35,
-        price: 23.99,
-        inStock: true,
-        category: "Antibiotic",
-      },
-      {
-        drugName: "Lisinopril",
-        dosage: "10mg",
-        quantity: 70,
-        price: 15.49,
-        inStock: true,
-        category: "Blood Pressure",
-      },
-      {
-        drugName: "Metformin",
-        dosage: "500mg",
-        quantity: 90,
-        price: 18.49,
-        inStock: true,
-        category: "Diabetes",
-      },
-    ],
-  },
-  {
-    id: 5,
-    name: "RxExpress Pharmacy",
-    address: "567 Maple Drive, East End",
-    phone: "+1 (555) 567-8901",
-    hours: "8:00 AM - 8:00 PM",
-    distance: "3.1 miles",
-    type: "Express Pharmacy",
-    isOpen: true,
-    inventory: [
-      {
-        drugName: "Aspirin",
-        dosage: "500mg",
-        quantity: 75,
-        price: 9.99,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Ibuprofen",
-        dosage: "200mg",
-        quantity: 90,
-        price: 13.99,
-        inStock: true,
-        category: "Pain Relief",
-      },
-      {
-        drugName: "Amoxicillin",
-        dosage: "500mg",
-        quantity: 0,
-        price: 26.99,
-        inStock: false,
-        category: "Antibiotic",
-      },
-      {
-        drugName: "Lisinopril",
-        dosage: "10mg",
-        quantity: 40,
-        price: 17.99,
-        inStock: true,
-        category: "Blood Pressure",
-      },
-      {
-        drugName: "Metformin",
-        dosage: "500mg",
-        quantity: 60,
-        price: 20.99,
-        inStock: true,
-        category: "Diabetes",
-      },
-    ],
-  },
-];
+// Fetch pharmacies from backend
+function usePharmaciesData() {
+  const [pharmacies, setPharmacies] = useState<PublicPharmacyAPIResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/api/public/pharmacies-with-inventory")
+      .then((res) => {
+        setPharmacies(res.data || []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(e?.message || "Failed to load pharmacies");
+        setLoading(false);
+      });
+  }, []);
+  return { pharmacies, loading, error };
+}
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -339,31 +119,26 @@ export function HomePage() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [sortByCategory, setSortByCategory] = useState<string>("none");
 
+  // Fetch pharmacies from backend
+  const { pharmacies } = usePharmaciesData();
+
   // Filter pharmacies based on drug availability
-  const getFilteredResults = (): PharmacyWithMatchingDrugs[] => {
+  const getFilteredResults = (): PublicPharmacyAPIResponse[] => {
     if (!searchQuery && !selectedDrug) {
-      return pharmacies as PharmacyWithMatchingDrugs[];
+      return pharmacies;
     }
-
-    const query = selectedDrug || searchQuery;
+    const query = (selectedDrug || searchQuery).toLowerCase();
     return pharmacies
-      .map((pharmacy): PharmacyWithMatchingDrugs | null => {
-        const matchingDrugs = pharmacy.inventory.filter(
-          (drug) =>
-            drug.drugName
-              .toLowerCase()
-              .includes(query.toLowerCase()),
+      .map((pharmacy) => {
+        const matchingDrugs = pharmacy.inventory.filter((drug) =>
+          drug.drugName.toLowerCase().includes(query)
         );
-
         if (matchingDrugs.length > 0) {
-          return {
-            ...pharmacy,
-            matchingDrugs,
-          };
+          return { ...pharmacy, matchingDrugs };
         }
         return null;
       })
-      .filter((pharmacy): pharmacy is PharmacyWithMatchingDrugs => pharmacy !== null);
+      .filter((pharmacy): pharmacy is PublicPharmacyAPIResponse & { matchingDrugs: typeof pharmacies[0]["inventory"] } => pharmacy !== null);
   };
 
   // Apply sorting and filtering
@@ -381,53 +156,27 @@ export function HomePage() {
 
     // Filter by pharmacy type
     if (filterType !== "all") {
-      results = results.filter(
-        (pharmacy) => pharmacy.type === filterType,
-      );
+      results = results.filter((pharmacy) => pharmacy.type === filterType);
     }
 
     // Filter by medicine category (if searching)
-    if (
-      filterCategory !== "all" &&
-      (searchQuery || selectedDrug)
-    ) {
-      results = results.filter((pharmacy) => {
-        if (pharmacy.matchingDrugs) {
-          return pharmacy.matchingDrugs.some(
-            (drug) => drug.category === filterCategory,
-          );
-        }
-        return false;
-      });
-    }
-
-    // Sort by distance
-    if (sortBy === "distance") {
-      results = results.sort((a, b) => {
-        const distanceA = parseFloat(a.distance);
-        const distanceB = parseFloat(b.distance);
-        return distanceA - distanceB;
+    if (filterCategory !== "all" && (searchQuery || selectedDrug)) {
+      results = results.filter((pharmacy: any) => {
+        const drugs = pharmacy.matchingDrugs || pharmacy.inventory;
+        return drugs.some((drug: any) => drug.category === filterCategory);
       });
     }
 
     // Sort by medicine category availability
     if (sortByCategory !== "none") {
-      results = results.sort((a, b) => {
+      results = results.slice().sort((a: any, b: any) => {
         // Count in-stock items for the selected category
-        const countA = a.inventory
-          .filter(
-            (drug) =>
-              drug.category === sortByCategory && drug.inStock,
-          )
-          .reduce((sum, drug) => sum + drug.quantity, 0);
-
-        const countB = b.inventory
-          .filter(
-            (drug) =>
-              drug.category === sortByCategory && drug.inStock,
-          )
-          .reduce((sum, drug) => sum + drug.quantity, 0);
-
+        const countA = (a.matchingDrugs || a.inventory)
+          .filter((drug: any) => drug.category === sortByCategory)
+          .reduce((sum: number, drug: any) => sum + (drug.quantity || 0), 0);
+        const countB = (b.matchingDrugs || b.inventory)
+          .filter((drug: any) => drug.category === sortByCategory)
+          .reduce((sum: number, drug: any) => sum + (drug.quantity || 0), 0);
         return countB - countA; // Descending order (most stock first)
       });
     }
@@ -435,23 +184,33 @@ export function HomePage() {
     return results;
   };
 
-  const filteredResults = getSortedAndFilteredResults();
+  // Map backend response to PharmacyList type (add distance, ensure inStock is boolean, map updated_at)
+  const filteredResults = getSortedAndFilteredResults().map(pharmacy => ({
+    ...pharmacy,
+    distance: pharmacy.distance || "-", // Default value
+    inventory: pharmacy.inventory.map(drug => ({
+      ...drug,
+      inStock: Boolean(drug.inStock),
+      // Use updatedAt directly from backend (no mapping from updated_at)
+    })),
+    ...(pharmacy.matchingDrugs
+      ? {
+          matchingDrugs: pharmacy.matchingDrugs.map(drug => ({
+            ...drug,
+            inStock: Boolean(drug.inStock),
+            // Use updatedAt directly from backend (no mapping from updated_at)
+          })),
+        }
+      : {}),
+  }));
 
   // Get unique pharmacy types
-  const pharmacyTypes = Array.from(
-    new Set(pharmacies.map((p) => p.type)),
-  );
+  const pharmacyTypes = Array.from(new Set(pharmacies.map((p) => p.type)));
 
   // Get unique medicine categories
   const medicineCategories = Array.from(
-    new Set(
-      pharmacies.flatMap((p) =>
-        p.inventory.map((drug) => drug.category),
-      ),
-    ),
+    new Set(pharmacies.flatMap((p) => p.inventory.map((drug) => drug.category)))
   );
-
-
 
   return (
     <div className="min-h-screen bg-background">
@@ -947,6 +706,7 @@ export function HomePage() {
 
               <PharmacyList
                 pharmacies={filteredResults}
+                searchQuery={searchQuery}
                 searchQuery={searchQuery || selectedDrug || ""}
               />
             </motion.div>

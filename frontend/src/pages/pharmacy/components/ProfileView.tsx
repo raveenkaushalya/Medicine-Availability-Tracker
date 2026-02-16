@@ -49,9 +49,9 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
     pharmacyPhoneNumber: "",
     description: "",
     operatingHours: {
-      weekdays: "",
-      saturday: "",
-      sunday: "",
+      weekdays: { open: "", close: "" },
+      saturday: { open: "", close: "" },
+      sunday: { open: "", close: "" },
     },
   });
 
@@ -75,12 +75,7 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
       established: pharmacy.established ?? pharmacy.estYear ?? prev.established,
 
       // Location
-      address: pharmacy.addressInSriLanka ?? prev.address,
-      streetAddress: pharmacy.streetAddress ?? prev.streetAddress,
-      city: pharmacy.city || prev.city,
-      state: pharmacy.state || prev.state,
-      zipCode: pharmacy.zipCode || prev.zipCode,
-      country: pharmacy.country || prev.country,
+      address: pharmacy.address ?? prev.address,
       latitude: pharmacy.latitude ?? prev.latitude,
       longitude: pharmacy.longitude ?? prev.longitude,
 
@@ -94,14 +89,12 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
         const fallback = prev.operatingHours;
         const raw = pharmacy.openingHoursJson;
         if (!raw) return fallback;
-
         try {
           const obj = JSON.parse(raw);
           return {
-            ...fallback,
-            weekdays: obj.weekdays ?? fallback.weekdays,
-            saturday: obj.saturday ?? fallback.saturday,
-            sunday: obj.sunday ?? fallback.sunday,
+            weekdays: obj.weekdays || { open: "", close: "" },
+            saturday: obj.saturday || { open: "", close: "" },
+            sunday: obj.sunday || { open: "", close: "" },
           };
         } catch {
           return fallback;
@@ -142,12 +135,7 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
           telephone: profile.pharmacyPhoneNumber,
           openingHoursJson,
           aboutPharmacy: profile.description,
-          addressInSriLanka: profile.address,
-          streetAddress: profile.streetAddress,
-          city: profile.city,
-          state: profile.state,
-          zipCode: profile.zipCode,
-          country: profile.country,
+          address: profile.address,
           latitude: profile.latitude,
           longitude: profile.longitude,
         }),
@@ -218,16 +206,17 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
             {(profile.pharmacyName ?? "P").charAt(0)}
           </div>
           <div className="flex-1 text-center md:text-left">
-            <h2 className="text-white mb-2">{profile.pharmacyName}</h2>
-            <p className="text-lime-400 text-sm">{profile.ownerName}</p>
+            <h2 className="text-white mb-2">{pharmacy.legalEntityName || profile.pharmacyName}</h2>
+            {pharmacy.tradeName && pharmacy.legalEntityName && (
+              <p className="text-gray-200 text-sm">Trade Name: {pharmacy.tradeName}</p>
+            )}
+            {pharmacy.ownerName && (
+              <p className="text-gray-200 text-sm">{pharmacy.ownerName}</p>
+            )}
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-4">
               <div className="flex items-center gap-2 text-sm">
                 <Building className="w-4 h-4" />
                 <span>License: {profile.licenseNumber}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="w-4 h-4" />
-                <span>Est. {profile.established}</span>
               </div>
             </div>
           </div>
@@ -395,9 +384,10 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <div className="grid grid-cols-1 gap-4">
           {/* Address (editable) */}
-          <div className="md:col-span-2">
+          <div>
             <label className="block text-gray-700 mb-2">Address</label>
             {isEditing ? (
               <input
@@ -413,99 +403,6 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
             ) : (
               <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
                 {profile.address || "text"}
-              </div>
-            )}
-          </div>
-
-          {/* Street Address (editable) */}
-          <div className="md:col-span-2">
-            <label className="block text-gray-700 mb-2">Street Address</label>
-            {isEditing ? (
-              <input
-                className="w-full px-4 py-3 rounded-lg border border-gray-300"
-                value={profile.streetAddress || ""}
-                onChange={(e) =>
-                  setProfile((p: any) => ({
-                    ...p,
-                    streetAddress: e.target.value,
-                  }))
-                }
-              />
-            ) : (
-              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                {profile.streetAddress || "-"}
-              </div>
-            )}
-          </div>
-
-          {/* City */}
-          <div>
-            <label className="block text-gray-700 mb-2">City</label>
-            {isEditing ? (
-              <input
-                className="w-full px-4 py-3 rounded-lg border border-gray-300"
-                value={profile.city || ""}
-                onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, city: e.target.value }))
-                }
-              />
-            ) : (
-              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                {profile.city || "-"}
-              </div>
-            )}
-          </div>
-
-          {/* State */}
-          <div>
-            <label className="block text-gray-700 mb-2">State</label>
-            {isEditing ? (
-              <input
-                className="w-full px-4 py-3 rounded-lg border border-gray-300"
-                value={profile.state || ""}
-                onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, state: e.target.value }))
-                }
-              />
-            ) : (
-              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                {profile.state || "-"}
-              </div>
-            )}
-          </div>
-
-          {/* ZIP Code */}
-          <div>
-            <label className="block text-gray-700 mb-2">ZIP Code</label>
-            {isEditing ? (
-              <input
-                className="w-full px-4 py-3 rounded-lg border border-gray-300"
-                value={profile.zipCode || ""}
-                onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, zipCode: e.target.value }))
-                }
-              />
-            ) : (
-              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                {profile.zipCode || "-"}
-              </div>
-            )}
-          </div>
-
-          {/* Country */}
-          <div>
-            <label className="block text-gray-700 mb-2">Country</label>
-            {isEditing ? (
-              <input
-                className="w-full px-4 py-3 rounded-lg border border-gray-300"
-                value={profile.country || ""}
-                onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, country: e.target.value }))
-                }
-              />
-            ) : (
-              <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                {profile.country || "-"}
               </div>
             )}
           </div>
@@ -576,43 +473,93 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
             { key: "weekdays", label: "Monday - Friday" },
             { key: "saturday", label: "Saturday" },
             { key: "sunday", label: "Sunday" },
-          ].map((day) => (
-            <div
-              key={day.key}
-              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-            >
-              <span className="text-gray-700">{day.label}</span>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={
-                    profile.operatingHours[
-                      day.key as keyof typeof profile.operatingHours
-                    ]
-                  }
-                  onChange={(e) =>
-                    setProfile({
-                      ...profile,
-                      operatingHours: {
-                        ...profile.operatingHours,
-                        [day.key]: e.target.value,
-                      },
-                    })
-                  }
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 text-white bg-white/20 placeholder:text-white/60"
-                  style={{ backgroundColor: "white", color: "#222" }}
-                />
-              ) : (
-                <span className="text-gray-900">
-                  {
-                    profile.operatingHours[
-                      day.key as keyof typeof profile.operatingHours
-                    ]
-                  }
-                </span>
-              )}
-            </div>
-          ))}
+          ].map((day) => {
+            const isWeekend = day.key === "saturday" || day.key === "sunday";
+            const isClosed =
+              isWeekend &&
+              (!profile.operatingHours[day.key].open && !profile.operatingHours[day.key].close);
+            return (
+              <div
+                key={day.key}
+                className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 rounded-lg gap-2"
+              >
+                <span className="text-gray-700 w-40">{day.label}</span>
+                {isEditing ? (
+                  <div className="flex gap-2 flex-1 items-center">
+                    {isWeekend && (
+                      <label className="flex items-center gap-1 mr-3">
+                        <input
+                          type="checkbox"
+                          checked={isClosed}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setProfile(p => ({
+                                ...p,
+                                operatingHours: {
+                                  ...p.operatingHours,
+                                  [day.key]: { open: "", close: "" },
+                                },
+                              }));
+                            } else {
+                              setProfile(p => ({
+                                ...p,
+                                operatingHours: {
+                                  ...p.operatingHours,
+                                  [day.key]: { open: "09:00", close: "17:00" },
+                                },
+                              }));
+                            }
+                          }}
+                        />
+                        <span className="text-gray-500 text-xs">Closed</span>
+                      </label>
+                    )}
+                    <input
+                      type="time"
+                      value={profile.operatingHours[day.key].open}
+                      onChange={e => setProfile(p => ({
+                        ...p,
+                        operatingHours: {
+                          ...p.operatingHours,
+                          [day.key]: {
+                            ...p.operatingHours[day.key],
+                            open: e.target.value
+                          }
+                        }
+                      }))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg w-32"
+                      disabled={isWeekend && isClosed}
+                    />
+                    <span className="text-gray-500 self-center">to</span>
+                    <input
+                      type="time"
+                      value={profile.operatingHours[day.key].close}
+                      onChange={e => setProfile(p => ({
+                        ...p,
+                        operatingHours: {
+                          ...p.operatingHours,
+                          [day.key]: {
+                            ...p.operatingHours[day.key],
+                            close: e.target.value
+                          }
+                        }
+                      }))}
+                      className="px-3 py-2 border border-gray-300 rounded-lg w-32"
+                      disabled={isWeekend && isClosed}
+                    />
+                  </div>
+                ) : (
+                  <span className="text-gray-900">
+                    {profile.operatingHours[day.key].open && profile.operatingHours[day.key].close
+                      ? `${profile.operatingHours[day.key].open} - ${profile.operatingHours[day.key].close}`
+                      : isWeekend && isClosed
+                        ? "Closed"
+                        : "Not set"}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </motion.div>
 

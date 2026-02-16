@@ -398,12 +398,40 @@ export function AdminDashboard() {
   const [selectedInquiry, setSelectedInquiry] = useState<any | null>(null);
 
   // Stats
+  const [totalMedicines, setTotalMedicines] = useState<number>(0);
+  const [totalActivePharmacies, setTotalActivePharmacies] = useState<number>(0);
+
+  // Fetch total medicines and total active pharmacies
+  useEffect(() => {
+    // Fetch total medicines (from new count endpoint)
+    const fetchTotalMedicines = async () => {
+      try {
+        const res = await apiFetch<number>('/api/v1/admin/medicines/count');
+        setTotalMedicines(typeof res === 'number' ? res : 0);
+      } catch {
+        setTotalMedicines(0);
+      }
+    };
+
+    // Fetch total active pharmacies (from new count endpoint)
+    const fetchTotalActivePharmacies = async () => {
+      try {
+        const res = await apiFetch<number>('/api/v1/admin/pharmacies/count?status=APPROVED');
+        setTotalActivePharmacies(typeof res === 'number' ? res : 0);
+      } catch {
+        setTotalActivePharmacies(0);
+      }
+    };
+
+    fetchTotalMedicines();
+    fetchTotalActivePharmacies();
+  }, []);
+
   const stats = {
-    totalPharmacies: pendingPharmacies.length + 124, // Mock total
-    pendingReviews: pendingPharmacies.filter((p) => p.status === "pending")
-      .length,
-    totalMedicines: 2458,
-    activeUsers: 8540,
+    totalPharmacies: pendingPharmacies.length + totalActivePharmacies,
+    pendingReviews: pendingPharmacies.filter((p) => p.status === "pending").length,
+    totalMedicines,
+    activeUsers: 8540, // Keep mock for now
     // ... rest of stats
   };
 

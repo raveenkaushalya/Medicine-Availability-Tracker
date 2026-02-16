@@ -1,27 +1,35 @@
 package com.example.backend.service.impl;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.backend.dto.request.AdminMedicineCreateRequest;
 import com.example.backend.dto.request.AdminMedicineUpdateRequest;
 import com.example.backend.dto.response.AdminMedicineRowResponse;
+import com.example.backend.dto.response.AdminMedicineSuggestItem;
 import com.example.backend.entity.CatalogStatus;
 import com.example.backend.entity.MedicineMaster;
 import com.example.backend.repository.MedicineMasterRepository;
 import com.example.backend.service.AdminMedicineService;
+
 import jakarta.persistence.criteria.Predicate;
-import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import com.example.backend.dto.response.AdminMedicineSuggestItem;
-import java.util.Collections;
-import java.util.List;
-
-
-import java.util.Locale;
 
 @Service
 @Transactional
 public class AdminMedicineServiceImpl implements AdminMedicineService {
+    @Override
+    public long count() {
+        return repo.count();
+    }
 
     private final MedicineMasterRepository repo;
 

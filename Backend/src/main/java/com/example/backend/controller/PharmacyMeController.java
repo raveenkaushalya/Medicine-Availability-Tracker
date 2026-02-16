@@ -1,5 +1,12 @@
 package com.example.backend.controller;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.backend.dto.request.UpdatePharmacyMeRequest;
 import com.example.backend.dto.response.ApiResponse;
 import com.example.backend.dto.response.PharmacyMeResponse;
@@ -9,8 +16,8 @@ import com.example.backend.entity.User;
 import com.example.backend.repository.PharmacyLocationRepository;
 import com.example.backend.repository.PharmacyRepository;
 import com.example.backend.repository.UserRepository;
+
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/pharmacies")
@@ -86,6 +93,7 @@ public class PharmacyMeController {
         User user = requireLoggedInUser(request);
         Pharmacy pharmacy = requireMyPharmacy(user);
 
+
         // update pharmacy editable fields
         if (req.getContactFullName() != null) pharmacy.setContactFullName(req.getContactFullName());
         if (req.getContactTitle() != null) pharmacy.setContactTitle(req.getContactTitle());
@@ -93,6 +101,8 @@ public class PharmacyMeController {
         if (req.getTelephone() != null) pharmacy.setTelephone(req.getTelephone());
         if (req.getAboutPharmacy() != null) pharmacy.setAboutPharmacy(req.getAboutPharmacy());
         if (req.getOpeningHoursJson() != null) pharmacy.setOpeningHoursJson(req.getOpeningHoursJson());
+        // PATCH: update addressInSriLanka if address is provided
+        if (req.getAddress() != null) pharmacy.setAddressInSriLanka(req.getAddress());
 
         pharmacyRepository.save(pharmacy);
 

@@ -1,19 +1,34 @@
 package com.example.backend.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.backend.dto.request.PharmacyRejectRequest;
 import com.example.backend.dto.response.ApiResponse;
 import com.example.backend.dto.response.PharmacyApproveResponse;
-import com.example.backend.dto.response.PharmacyRowResponse;
 import com.example.backend.service.PharmacyService;
+
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/admin/pharmacies")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class AdminPharmacyController {
+    @GetMapping("/count")
+    public long count(@RequestParam(defaultValue = "ALL") String status) {
+        if (status == null || status.equalsIgnoreCase("ALL")) {
+            return pharmacyService.countAll();
+        } else {
+            return pharmacyService.countByStatus(status);
+        }
+    }
 
     private final PharmacyService pharmacyService;
 

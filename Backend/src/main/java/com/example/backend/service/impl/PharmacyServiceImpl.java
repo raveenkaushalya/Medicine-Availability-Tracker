@@ -1,5 +1,19 @@
 package com.example.backend.service.impl;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Base64;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+
 import com.example.backend.dto.request.PharmacyRegisterRequest;
 import com.example.backend.dto.response.PharmacyApproveResponse;
 import com.example.backend.dto.response.PharmacyRowResponse;
@@ -11,19 +25,21 @@ import com.example.backend.repository.PasswordSetupTokenRepository;
 import com.example.backend.repository.PharmacyRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.PharmacyService;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.*;
-import org.springframework.stereotype.Service;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-import java.util.Base64;
 
 @Service
 public class PharmacyServiceImpl implements PharmacyService {
+    @Override
+    public long countAll() {
+        return pharmacyRepository.count();
+    }
+
+    @Override
+    public long countByStatus(String status) {
+        if (status == null || status.equalsIgnoreCase("ALL")) {
+            return pharmacyRepository.count();
+        }
+        return pharmacyRepository.countByStatus(PharmacyStatus.valueOf(status.toUpperCase()));
+    }
 
     private final PharmacyRepository pharmacyRepository;
     private final UserRepository userRepository;
@@ -104,15 +120,15 @@ public class PharmacyServiceImpl implements PharmacyService {
 
         Page<Pharmacy> result;
 
-        if (hasStatus) {
+        if (hasStatus && status != null) {
             PharmacyStatus st = PharmacyStatus.valueOf(status.toUpperCase());
             result = hasQ
-                    ? pharmacyRepository.findByStatusAndLegalEntityNameContainingIgnoreCase(st, q, pageable)
-                    : pharmacyRepository.findByStatus(st, pageable);
+                ? pharmacyRepository.findByStatusAndLegalEntityNameContainingIgnoreCase(st, q, pageable)
+                : pharmacyRepository.findByStatus(st, pageable);
         } else {
             result = hasQ
-                    ? pharmacyRepository.findByLegalEntityNameContainingIgnoreCase(q, pageable)
-                    : pharmacyRepository.findAll(pageable);
+                ? pharmacyRepository.findByLegalEntityNameContainingIgnoreCase(q, pageable)
+                : pharmacyRepository.findAll(pageable);
         }
 
         return result.map(this::toRowResponse);
