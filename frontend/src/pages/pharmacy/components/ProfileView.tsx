@@ -1,3 +1,12 @@
+// Helper to format 24h time ("HH:mm") to 12h am/pm
+function format12Hour(time: string | undefined): string {
+  if (!time) return '';
+  const [h, m] = time.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return time;
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
 import { motion } from "motion/react";
 
 import { useEffect, useState } from "react";
@@ -136,6 +145,9 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
           openingHoursJson,
           aboutPharmacy: profile.description,
           address: profile.address,
+          city: profile.city,
+          state: profile.state,
+          zipCode: profile.zipCode,
           latitude: profile.latitude,
           longitude: profile.longitude,
         }),
@@ -386,8 +398,8 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
 
 
         <div className="grid grid-cols-1 gap-4">
-          {/* Address (editable) */}
-          <div>
+          {/* Address (editable, full row) */}
+          <div className="col-span-1 md:col-span-2">
             <label className="block text-gray-700 mb-2">Address</label>
             {isEditing ? (
               <input
@@ -402,9 +414,69 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
               />
             ) : (
               <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                {profile.address || "text"}
+                {profile.address || "-"}
               </div>
             )}
+          </div>
+          {/* City, Province, and Zip Code (side by side, 1/3 width each) */}
+          <div className="col-span-1 md:col-span-2 flex gap-4">
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-gray-700 mb-2">City</label>
+              {isEditing ? (
+                <input
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                  value={profile.city || ""}
+                  onChange={(e) =>
+                    setProfile((p: any) => ({
+                      ...p,
+                      city: e.target.value,
+                    }))
+                  }
+                />
+              ) : (
+                <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                  {profile.city || "-"}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-gray-700 mb-2">Province</label>
+              {isEditing ? (
+                <input
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                  value={profile.state || ""}
+                  onChange={(e) =>
+                    setProfile((p: any) => ({
+                      ...p,
+                      state: e.target.value,
+                    }))
+                  }
+                />
+              ) : (
+                <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                  {profile.state || "-"}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-gray-700 mb-2">Zip Code</label>
+              {isEditing ? (
+                <input
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300"
+                  value={profile.zipCode || ""}
+                  onChange={(e) =>
+                    setProfile((p: any) => ({
+                      ...p,
+                      zipCode: e.target.value,
+                    }))
+                  }
+                />
+              ) : (
+                <div className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                  {profile.zipCode || "-"}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Map + GPS */}
@@ -551,7 +623,7 @@ export function ProfileView({ pharmacy, onRefresh }: ProfileViewProps) {
                 ) : (
                   <span className="text-gray-900">
                     {profile.operatingHours[day.key].open && profile.operatingHours[day.key].close
-                      ? `${profile.operatingHours[day.key].open} - ${profile.operatingHours[day.key].close}`
+                      ? `${format12Hour(profile.operatingHours[day.key].open)} - ${format12Hour(profile.operatingHours[day.key].close)}`
                       : isWeekend && isClosed
                         ? "Closed"
                         : "Not set"}

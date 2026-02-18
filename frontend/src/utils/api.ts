@@ -1,7 +1,13 @@
-const BASE_URL = "http://localhost:8080";
+
+const BASE_URL = (_path: string) => {
+  // Always use Spring Boot default port
+  return 'http://localhost:8080';
+};
+
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(BASE_URL + path, {
+  const base = BASE_URL(path);
+  const res = await fetch(base + path, {
     ...options,
     headers: {
       "Content-Type": "application/json",

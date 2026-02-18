@@ -1,3 +1,28 @@
+import emailjs from '@emailjs/browser';
+// EmailJS config (replace with your actual IDs)
+const EMAILJS_SERVICE_ID = 'pharmacy_pass';
+const EMAILJS_TEMPLATE_ID = 'template_approval';
+const EMAILJS_PUBLIC_KEY = 'EfzgOcTmuS3MpXyXT';
+
+function sendApprovalEmail(toEmail: string, toName: string, setupLink: string) {
+  emailjs.send(
+    EMAILJS_SERVICE_ID,
+    EMAILJS_TEMPLATE_ID,
+    {
+      to_email: toEmail,
+      to_name: toName,
+      setup_link: setupLink,
+    },
+    EMAILJS_PUBLIC_KEY
+  ).then(
+    (result) => {
+      console.log('Email sent:', result.text);
+    },
+    (error) => {
+      console.error('Email error:', error.text);
+    }
+  );
+}
 import { useEffect, useState } from "react";
 
 import { motion, AnimatePresence } from "motion/react";
@@ -354,7 +379,15 @@ export function AdminDashboard() {
       );
 
       const setupLink = res?.data?.setupLink;
-      if (setupLink) {
+      // Find the approved pharmacy's info (email, name)
+      const approvedPharmacy = pendingPharmacies.find((p) => p.id === id);
+      if (setupLink && approvedPharmacy) {
+        // Send email automatically (no sending popup)
+        sendApprovalEmail(
+          approvedPharmacy.email || approvedPharmacy.contactPersonEmail || '',
+          approvedPharmacy.name || 'Pharmacy',
+          setupLink
+        );
         window.prompt(
           "Copy this setup link and send to the pharmacy:",
           setupLink,
@@ -428,7 +461,7 @@ export function AdminDashboard() {
   }, []);
 
   const stats = {
-    totalPharmacies: pendingPharmacies.length + totalActivePharmacies,
+    totalPharmacies: totalActivePharmacies, // Only show real approved pharmacies
     pendingReviews: pendingPharmacies.filter((p) => p.status === "pending").length,
     totalMedicines,
     activeUsers: 8540, // Keep mock for now

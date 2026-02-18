@@ -32,13 +32,10 @@ public class PublicPharmacyListingController {
     public ApiResponse getPharmaciesWithAvailableInventory() {
         // Get all pharmacies
         List<Pharmacy> pharmacies = pharmacyRepository.findAll();
-        // For each pharmacy, get inventory with stock > 0
+        // For each pharmacy, get all inventory (including out of stock)
         List<PublicPharmacyWithInventoryResponse> result = pharmacies.stream()
             .map(pharmacy -> {
-                List<PharmacyInventoryItem> inventory = inventoryRepository.findByPharmacyOrderByIdDesc(pharmacy)
-                    .stream()
-                    .filter(item -> item.getStock() != null && item.getStock() > 0)
-                    .collect(Collectors.toList());
+                List<PharmacyInventoryItem> inventory = inventoryRepository.findByPharmacyOrderByIdDesc(pharmacy);
                 if (inventory.isEmpty()) return null;
                 // Fetch location
                 var locOpt = pharmacyLocationRepository.findByPharmacy(pharmacy);

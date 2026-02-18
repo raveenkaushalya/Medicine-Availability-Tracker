@@ -317,6 +317,33 @@ export function InventoryView(props: { medicineDatabase: any[] }) {
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+
+                        <button
+                          className={`px-2.5 py-1.5 rounded-full border transition-colors duration-150 text-[12px] font-medium focus:outline-none focus:ring-2 focus:ring-orange-200 focus:ring-offset-2
+                            ${r.stock === 0
+                              ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed'
+                              : 'bg-orange-100 text-orange-700 border-orange-300 hover:bg-orange-200 hover:text-orange-900'}
+                          `}
+                          style={{ minWidth: '54px', minHeight: '22px', lineHeight: '1.1' }}
+                          title="Mark as Out of Stock"
+                          disabled={r.stock === 0}
+                          onClick={async () => {
+                            if (r.stock === 0) return;
+                            const ok = window.confirm(`Mark '${r.genericName || r.brandName}' as out of stock?`);
+                            if (!ok) return;
+                            await apiFetch(`/api/v1/pharmacies/inventory/${r.id}`, {
+                              method: "PUT",
+                              body: JSON.stringify({
+                                medicineId: r.medicineId,
+                                stock: 0,
+                                price: r.price,
+                              }),
+                            });
+                            await loadInventory();
+                          }}
+                        >
+                          VOID
+                        </button>
                       </div>
                     </td>
                   </tr>

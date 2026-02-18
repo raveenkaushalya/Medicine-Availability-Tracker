@@ -1,6 +1,76 @@
 import capsulesImage from "../../assets/images/capsules-falling.png";
 import logoLargeImage from "../../assets/images/logo-large.png";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+// Forgot Password Modal Component
+function ForgotPasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Handle click outside modal to close
+  const modalRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open, onClose]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      await apiFetch("/api/v1/pharmacies/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setSent(true);
+    } catch (err: any) {
+      setError(err?.message || "Failed to send reset email");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div ref={modalRef} className="bg-white rounded-xl p-8 shadow-lg w-full max-w-md relative">
+        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-700">✕</button>
+        <h2 className="text-lg font-bold mb-4 text-indigo-900">Forgot Password</h2>
+        {sent ? (
+          <div className="text-green-700 text-sm">If an account exists for this email, a reset link has been sent.</div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <input
+              type="email"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              placeholder="Enter your email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
+            {error && <div className="text-red-600 text-xs">{error}</div>}
+            <button
+              type="submit"
+              className="w-full py-3 bg-indigo-900 text-white rounded-lg font-semibold hover:bg-indigo-800 transition-all"
+              disabled={loading}
+            >
+              {loading ? "Sending..." : "Send Reset Link"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 import { motion, AnimatePresence } from "motion/react";
 import { Eye, CheckCircle } from "lucide-react";
 import { PendingPharmacy } from "../admin/AdminDashboard";
@@ -15,6 +85,7 @@ interface PharmacyAuthProps {
 }
 
 export function PharmacyAuth({ onLogin, onRegister }: PharmacyAuthProps) {
+  const [forgotOpen, setForgotOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [step, setStep] = useState(1);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -382,16 +453,13 @@ export function PharmacyAuth({ onLogin, onRegister }: PharmacyAuthProps) {
                           <label className="block text-sm font-medium text-gray-700">
                             Password
                           </label>
-                          <a
-                            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              window.location.href = "/not-implemented";
-                            }}
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors underline bg-transparent border-0 p-0"
+                            onClick={() => setForgotOpen(true)}
                           >
                             Forgot password?
-                          </a>
+                          </button>
                         </div>
                         <input
                           className="w-full py-4 px-3 text-sm text-gray-900 placeholder-gray-400 border border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none rounded-xl transition-all bg-gray-50/50 hover:bg-white"
@@ -886,6 +954,7 @@ export function PharmacyAuth({ onLogin, onRegister }: PharmacyAuthProps) {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
+  </div>
   );
 }

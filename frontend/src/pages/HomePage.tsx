@@ -184,25 +184,39 @@ export function HomePage() {
     return results;
   };
 
-  // Map backend response to PharmacyList type (add distance, ensure inStock is boolean, map updated_at)
-  const filteredResults = getSortedAndFilteredResults().map(pharmacy => ({
-    ...pharmacy,
-    distance: pharmacy.distance || "-", // Default value
-    inventory: pharmacy.inventory.map(drug => ({
-      ...drug,
-      inStock: Boolean(drug.inStock),
-      // Use updatedAt directly from backend (no mapping from updated_at)
-    })),
-    ...(pharmacy.matchingDrugs
-      ? {
-          matchingDrugs: pharmacy.matchingDrugs.map(drug => ({
-            ...drug,
-            inStock: Boolean(drug.inStock),
-            // Use updatedAt directly from backend (no mapping from updated_at)
-          })),
-        }
-      : {}),
-  }));
+  // Map backend response to PharmacyList type (add distance, ensure inStock is boolean, map updated_at, parse openingHours)
+  const filteredResults = getSortedAndFilteredResults().map(pharmacy => {
+    let openingHours = undefined;
+    if (pharmacy.hours) {
+      try {
+        const obj = typeof pharmacy.hours === 'string' ? JSON.parse(pharmacy.hours) : pharmacy.hours;
+        openingHours = {
+          weekdays: obj.weekdays || { open: '', close: '' },
+          saturday: obj.saturday || { open: '', close: '' },
+          sunday: obj.sunday || { open: '', close: '' },
+        };
+      } catch {
+        openingHours = undefined;
+      }
+    }
+    return {
+      ...pharmacy,
+      distance: pharmacy.distance || '-',
+      inventory: pharmacy.inventory.map(drug => ({
+        ...drug,
+        inStock: Boolean(drug.inStock),
+      })),
+      ...(pharmacy.matchingDrugs
+        ? {
+            matchingDrugs: pharmacy.matchingDrugs.map(drug => ({
+              ...drug,
+              inStock: Boolean(drug.inStock),
+            })),
+          }
+        : {}),
+      openingHours,
+    };
+  });
 
   // Get unique pharmacy types
   const pharmacyTypes = Array.from(new Set(pharmacies.map((p) => p.type)));

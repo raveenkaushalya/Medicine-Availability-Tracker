@@ -1,5 +1,14 @@
 package com.example.backend.service.impl;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.example.backend.dto.request.SetPasswordRequest;
 import com.example.backend.entity.PasswordSetupToken;
 import com.example.backend.entity.Pharmacy;
@@ -10,13 +19,6 @@ import com.example.backend.repository.PharmacyLocationRepository;
 import com.example.backend.repository.PharmacyRepository;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.PasswordSetupService;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 
 @Service
 public class PasswordSetupServiceImpl implements PasswordSetupService {
@@ -40,6 +42,22 @@ public class PasswordSetupServiceImpl implements PasswordSetupService {
     }
 
     @Override
+    public String generateResetToken(String email) {
+        User user = userRepository.findByUsername(email)
+                .orElseThrow(() -> new RuntimeException("No user found for this email"));
+        // Generate token and save
+        String rawToken = UUID.randomUUID().toString();
+        String tokenHash = sha256Hex(rawToken);
+        PasswordSetupToken token = new PasswordSetupToken();
+        token.setUser(user);
+        token.setTokenHash(tokenHash);
+        token.setCreatedAt(LocalDateTime.now());
+        token.setExpiresAt(LocalDateTime.now().plusHours(1));
+        tokenRepository.save(token);
+        return rawToken;
+    }
+
+    @Override
     public void setPassword(SetPasswordRequest req) {
 
         if (!req.getNewPassword().equals(req.getConfirmPassword())) {
@@ -51,10 +69,8 @@ public class PasswordSetupServiceImpl implements PasswordSetupService {
             throw new RuntimeException("Password must be at least 8 characters!");
         }
 
-        // ✅ NEW: Validate location
-        if (req.getLatitude() == null || req.getLongitude() == null) {
-            throw new RuntimeException("Please pin your pharmacy location on the map!");
-        }
+
+        // Location is now optional
 
         // Hash raw token and lookup
         String tokenHash = sha256Hex(req.getToken());

@@ -27,14 +27,24 @@ export const router = createBrowserRouter([
     },
   },
 
-  // ✅ ADD THIS (Pharmacy Set Password page)
+
+  // Pharmacy Set Password page
   {
-  path: "/pharmacy/set-password",
-  async lazy() {
-    const module = await import("./pages/pharmacy/PharmacySetPassword");
-    return { Component: module.default };
+    path: "/pharmacy/set-password",
+    async lazy() {
+      const module = await import("./pages/pharmacy/PharmacySetPassword");
+      return { Component: module.default };
+    },
   },
-},
+
+  // Pharmacy Reset Password page
+  {
+    path: "/pharmacy/reset-password",
+    async lazy() {
+      const module = await import("./pages/pharmacy/PharmacyResetPassword");
+      return { Component: module.default };
+    },
+  },
 
 
   {

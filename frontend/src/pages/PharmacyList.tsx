@@ -1,3 +1,12 @@
+  // Helper to format 24h time ("HH:mm") to 12h am/pm
+  function format12Hour(time: string | undefined): string {
+    if (!time) return '';
+    const [h, m] = time.split(":").map(Number);
+    if (isNaN(h) || isNaN(m)) return time;
+    const ampm = h >= 12 ? 'pm' : 'am';
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    return `${hour12}:${m.toString().padStart(2, '0')} ${ampm}`;
+  }
 import medicineIcon from '../assets/images/medicine-icon.png';
 import medicineIconSmall from '../assets/images/medicine-icon-small.png';
 import pharmacyCross from '../assets/images/pharmacy-cross.png';
@@ -27,6 +36,11 @@ interface Pharmacy {
   distance: string;
   inventory: Drug[];
   matchingDrugs?: Drug[];
+  openingHours?: {
+    weekdays?: { open: string; close: string };
+    saturday?: { open: string; close: string };
+    sunday?: { open: string; close: string };
+  };
 }
 
 interface PharmacyListProps {
@@ -49,18 +63,27 @@ function getRecentTimestamp() {
 }
 
 export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
-  // Helper to get minutes since update
-  function getMinutesAgo(updatedAt?: string) {
+  // Helper to format relative time (hours, days, weeks)
+  function timeAgo(updatedAt?: string) {
     if (!updatedAt) return '-';
     const updated = new Date(updatedAt);
     if (isNaN(updated.getTime())) return '-';
     const now = new Date();
     const diffMs = now.getTime() - updated.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return 'just now';
-    if (diffMin < 60) return `${diffMin} min ago`;
-    const hours = Math.floor(diffMin / 60);
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const sec = Math.floor(diffMs / 1000);
+    if (sec < 60) return 'just now';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min} min ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr} hour${hr > 1 ? 's' : ''} ago`;
+    const day = Math.floor(hr / 24);
+    if (day < 7) return `${day} day${day > 1 ? 's' : ''} ago`;
+    const week = Math.floor(day / 7);
+    if (week < 4) return `${week} week${week > 1 ? 's' : ''} ago`;
+    const month = Math.floor(day / 30);
+    if (month < 12) return `${month} month${month > 1 ? 's' : ''} ago`;
+    const year = Math.floor(day / 365);
+    return `${year} year${year > 1 ? 's' : ''} ago`;
   }
 
   if (pharmacies.length === 0) {
@@ -152,7 +175,14 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                               hours = pharmacy.openingHours?.sunday;
                             }
                             let isOpen = false;
-                            if (hours && hours.open && hours.close) {
+                            // Only use the hours for the current day group, do not let Sat/Sun closed affect weekdays and vice versa
+                            if (
+                              hours &&
+                              typeof hours.open === 'string' &&
+                              typeof hours.close === 'string' &&
+                              hours.open.trim() !== '' &&
+                              hours.close.trim() !== ''
+                            ) {
                               // Parse "HH:mm" to minutes since midnight
                               const [openH, openM] = hours.open.split(":").map(Number);
                               const [closeH, closeM] = hours.close.split(":").map(Number);
@@ -166,6 +196,7 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                                 isOpen = nowMins >= openMins || nowMins < closeMins;
                               }
                             }
+                            // If open/close is missing or empty for this day, always closed
                             return (
                               <span className={`font-semibold ${isOpen ? 'text-green-700' : 'text-red-700'}`}>{isOpen ? 'Open now' : 'Closed'}</span>
                             );
@@ -173,13 +204,13 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                           {/* Show Mon-Fri, Sat, Sun hours as 3 horizontal labels */}
                           <div className="flex gap-1 ml-2">
                             <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
-                              Mon-Fri: {pharmacy.openingHours?.weekdays?.open && pharmacy.openingHours?.weekdays?.close ? `${pharmacy.openingHours.weekdays.open} - ${pharmacy.openingHours.weekdays.close}` : 'Not set'}
+                              Mon-Fri: {pharmacy.openingHours?.weekdays?.open === '' && pharmacy.openingHours?.weekdays?.close === '' ? 'Closed' : (pharmacy.openingHours?.weekdays?.open && pharmacy.openingHours?.weekdays?.close ? `${format12Hour(pharmacy.openingHours.weekdays.open)} - ${format12Hour(pharmacy.openingHours.weekdays.close)}` : 'Not set')}
                             </span>
                             <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
-                              Sat: {pharmacy.openingHours?.saturday?.open && pharmacy.openingHours?.saturday?.close ? `${pharmacy.openingHours.saturday.open} - ${pharmacy.openingHours.saturday.close}` : 'Not set'}
+                              Sat: {pharmacy.openingHours?.saturday?.open === '' && pharmacy.openingHours?.saturday?.close === '' ? 'Closed' : (pharmacy.openingHours?.saturday?.open && pharmacy.openingHours?.saturday?.close ? `${format12Hour(pharmacy.openingHours.saturday.open)} - ${format12Hour(pharmacy.openingHours.saturday.close)}` : 'Not set')}
                             </span>
                             <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
-                              Sun: {pharmacy.openingHours?.sunday?.open && pharmacy.openingHours?.sunday?.close ? `${pharmacy.openingHours.sunday.open} - ${pharmacy.openingHours.sunday.close}` : 'Not set'}
+                              Sun: {pharmacy.openingHours?.sunday?.open === '' && pharmacy.openingHours?.sunday?.close === '' ? 'Closed' : (pharmacy.openingHours?.sunday?.open && pharmacy.openingHours?.sunday?.close ? `${format12Hour(pharmacy.openingHours.sunday.open)} - ${format12Hour(pharmacy.openingHours.sunday.close)}` : 'Not set')}
                             </span>
                           </div>
                           {/* Popover for full opening hours (no label) */}
@@ -188,9 +219,10 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                             {pharmacy.openingHours && typeof pharmacy.openingHours === 'object' ? (
                               <table className="w-full text-left">
                                 <tbody>
-                                  <tr><td className="pr-2">Mon-Fri:</td><td>{pharmacy.openingHours.weekdays?.open && pharmacy.openingHours.weekdays?.close ? `${pharmacy.openingHours.weekdays.open} - ${pharmacy.openingHours.weekdays.close}` : 'Not set'}</td></tr>
-                                  <tr><td className="pr-2">Saturday:</td><td>{pharmacy.openingHours.saturday?.open && pharmacy.openingHours.saturday?.close ? `${pharmacy.openingHours.saturday.open} - ${pharmacy.openingHours.saturday.close}` : 'Not set'}</td></tr>
-                                  <tr><td className="pr-2">Sunday:</td><td>{pharmacy.openingHours.sunday?.open && pharmacy.openingHours.sunday?.close ? `${pharmacy.openingHours.sunday.open} - ${pharmacy.openingHours.sunday.close}` : 'Not set'}</td></tr>
+                                  <tr><td className="pr-2">Mon-Fri:</td><td>{pharmacy.openingHours.weekdays?.open && pharmacy.openingHours.weekdays?.close ? `${format12Hour(pharmacy.openingHours.weekdays.open)} - ${format12Hour(pharmacy.openingHours.weekdays.close)}` : 'Not set'}</td></tr>
+                                  <tr><td className="pr-2">Mon-Fri:</td><td>{pharmacy.openingHours.weekdays?.open === '' && pharmacy.openingHours.weekdays?.close === '' ? 'Closed' : (pharmacy.openingHours.weekdays?.open && pharmacy.openingHours.weekdays?.close ? `${format12Hour(pharmacy.openingHours.weekdays.open)} - ${format12Hour(pharmacy.openingHours.weekdays.close)}` : 'Not set')}</td></tr>
+                                  <tr><td className="pr-2">Saturday:</td><td>{pharmacy.openingHours.saturday?.open === '' && pharmacy.openingHours.saturday?.close === '' ? 'Closed' : (pharmacy.openingHours.saturday?.open && pharmacy.openingHours.saturday?.close ? `${format12Hour(pharmacy.openingHours.saturday.open)} - ${format12Hour(pharmacy.openingHours.saturday.close)}` : 'Not set')}</td></tr>
+                                  <tr><td className="pr-2">Sunday:</td><td>{pharmacy.openingHours.sunday?.open === '' && pharmacy.openingHours.sunday?.close === '' ? 'Closed' : (pharmacy.openingHours.sunday?.open && pharmacy.openingHours.sunday?.close ? `${format12Hour(pharmacy.openingHours.sunday.open)} - ${format12Hour(pharmacy.openingHours.sunday.close)}` : 'Not set')}</td></tr>
                                 </tbody>
                               </table>
                             ) : (
@@ -299,7 +331,7 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-gray-500 mb-0.5">Updated</p>
-                              <p className="text-xs text-gray-700">{getMinutesAgo(drug.updatedAt)}</p>
+                              <p className="text-xs text-gray-700">{timeAgo(drug.updatedAt)}</p>
                             </div>
                           </div>
                         </div>
