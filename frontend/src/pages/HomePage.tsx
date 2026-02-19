@@ -24,27 +24,9 @@ import { motion } from "motion/react";
 import pillsBackground from "../assets/images/pills-background.png";
 
 // Type definitions
-interface Drug {
-  drugName: string;
-  dosage: string;
-  quantity: number;
-  price: number;
-  inStock: boolean;
-  category: string;
-  updatedAt?: string;
-}
 
-interface Pharmacy {
-  id: number;
-  name: string;
-  address: string;
-  phone: string;
-  hours: string;
-  distance: string;
-  type: string;
-  isOpen: boolean;
-  inventory: Drug[];
-}
+
+
 
 
 import { useEffect } from "react";
@@ -70,7 +52,20 @@ interface PublicPharmacyAPIResponse {
     inStock: boolean;
     updatedAt?: string;
   }>;
-  distance?: string; // Add optional distance for compatibility
+  distance?: string;
+  latitude?: number;
+  longitude?: number;
+  matchingDrugs?: Array<{
+    medicineId: number;
+    drugName: string;
+    brandName?: string;
+    dosage: string;
+    quantity: number;
+    price: number;
+    category: string;
+    inStock: boolean;
+    updatedAt?: string;
+  }>;
 }
 
 // Fetch pharmacies from backend
@@ -94,8 +89,12 @@ function usePharmaciesData() {
 }
 
 export function HomePage() {
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDrug, setSelectedDrug] = useState<string | null>(null);
+  const [pharmacyPage, setPharmacyPage] = useState(1);
+  const [medicineScrollCount, setMedicineScrollCount] = useState(8);
   const [viewMode, setViewMode] = useState<"user" | "owner" | "admin">("user");
   const [currentPage, setCurrentPage] = useState<
     | "home"
@@ -114,10 +113,7 @@ export function HomePage() {
 
   // Sorting states
   const [sortBy, setSortBy] = useState<"distance" | "none">("none");
-  const [filterStatus, setFilterStatus] = useState<"all" | "open" | "closed">("all");
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [sortByCategory, setSortByCategory] = useState<string>("none");
 
   // Fetch pharmacies from backend
   const { pharmacies } = usePharmaciesData();
@@ -130,7 +126,7 @@ export function HomePage() {
     const query = (selectedDrug || searchQuery).toLowerCase();
     return pharmacies
       .map((pharmacy) => {
-        const matchingDrugs = pharmacy.inventory.filter((drug) =>
+        const matchingDrugs = pharmacy.inventory.filter((drug: any) =>
           drug.drugName.toLowerCase().includes(query)
         );
         if (matchingDrugs.length > 0) {
@@ -138,54 +134,60 @@ export function HomePage() {
         }
         return null;
       })
-      .filter((pharmacy): pharmacy is PublicPharmacyAPIResponse & { matchingDrugs: typeof pharmacies[0]["inventory"] } => pharmacy !== null);
+      .filter((pharmacy): pharmacy is Exclude<typeof pharmacy, null> => pharmacy !== null);
   };
 
   // Apply sorting and filtering
   const getSortedAndFilteredResults = () => {
     let results = getFilteredResults();
 
-    // Filter by status (open/closed)
-    if (filterStatus !== "all") {
-      results = results.filter((pharmacy) => {
-        if (filterStatus === "open") return pharmacy.isOpen;
-        if (filterStatus === "closed") return !pharmacy.isOpen;
-        return true;
-      });
-    }
+
 
     // Filter by pharmacy type
     if (filterType !== "all") {
       results = results.filter((pharmacy) => pharmacy.type === filterType);
     }
 
-    // Filter by medicine category (if searching)
-    if (filterCategory !== "all" && (searchQuery || selectedDrug)) {
-      results = results.filter((pharmacy: any) => {
-        const drugs = pharmacy.matchingDrugs || pharmacy.inventory;
-        return drugs.some((drug: any) => drug.category === filterCategory);
-      });
-    }
 
-    // Sort by medicine category availability
-    if (sortByCategory !== "none") {
-      results = results.slice().sort((a: any, b: any) => {
-        // Count in-stock items for the selected category
-        const countA = (a.matchingDrugs || a.inventory)
-          .filter((drug: any) => drug.category === sortByCategory)
-          .reduce((sum: number, drug: any) => sum + (drug.quantity || 0), 0);
-        const countB = (b.matchingDrugs || b.inventory)
-          .filter((drug: any) => drug.category === sortByCategory)
-          .reduce((sum: number, drug: any) => sum + (drug.quantity || 0), 0);
-        return countB - countA; // Descending order (most stock first)
-      });
-    }
 
     return results;
   };
 
+  // Helper: calculate distance between two lat/lng points (Haversine formula)
+  function getDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371; // km
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  // Sort pharmacies: open first, then closed, then by latest medicine update time, or by distance if userLocation and sortBy === 'distance'
+  let sortedByOpenAndLatest = getSortedAndFilteredResults().slice();
+  if (sortBy === 'distance' && userLocation) {
+    sortedByOpenAndLatest.sort((a, b) => {
+      // If lat/lng missing, push to end
+      if (!a.latitude || !a.longitude) return 1;
+      if (!b.latitude || !b.longitude) return -1;
+      const distA = getDistance(userLocation.lat, userLocation.lng, a.latitude as number, a.longitude as number);
+      const distB = getDistance(userLocation.lat, userLocation.lng, b.latitude as number, b.longitude as number);
+      return distA - distB;
+    });
+  } else {
+    sortedByOpenAndLatest.sort((a: PublicPharmacyAPIResponse, b: PublicPharmacyAPIResponse) => {
+      if (a.isOpen && !b.isOpen) return -1;
+      if (!a.isOpen && b.isOpen) return 1;
+      const getLatest = (pharmacy: PublicPharmacyAPIResponse) => {
+        const drugs = pharmacy.matchingDrugs || pharmacy.inventory;
+        return Math.max(...drugs.map((drug: any) => new Date(drug.updatedAt || 0).getTime()));
+      };
+      return getLatest(b) - getLatest(a);
+    });
+  }
   // Map backend response to PharmacyList type (add distance, ensure inStock is boolean, map updated_at, parse openingHours)
-  const filteredResults = getSortedAndFilteredResults().map(pharmacy => {
+  const mappedResults = sortedByOpenAndLatest.map((pharmacy: PublicPharmacyAPIResponse) => {
     let openingHours = undefined;
     if (pharmacy.hours) {
       try {
@@ -208,7 +210,7 @@ export function HomePage() {
       })),
       ...(pharmacy.matchingDrugs
         ? {
-            matchingDrugs: pharmacy.matchingDrugs.map(drug => ({
+            matchingDrugs: pharmacy.matchingDrugs.map((drug: any) => ({
               ...drug,
               inStock: Boolean(drug.inStock),
             })),
@@ -221,10 +223,60 @@ export function HomePage() {
   // Get unique pharmacy types
   const pharmacyTypes = Array.from(new Set(pharmacies.map((p) => p.type)));
 
-  // Get unique medicine categories
-  const medicineCategories = Array.from(
-    new Set(pharmacies.flatMap((p) => p.inventory.map((drug) => drug.category)))
-  );
+  // Pagination for pharmacies (default view)
+  const pharmaciesPerPage = 8;
+  const paginatedPharmacies = mappedResults.slice((pharmacyPage - 1) * pharmaciesPerPage, pharmacyPage * pharmaciesPerPage);
+
+  // Infinite scroll for medicine search
+  const isMedicineSearch = !!(searchQuery || selectedDrug);
+  const medicineResults = isMedicineSearch ? mappedResults.slice(0, medicineScrollCount) : [];
+
+  // Infinite scroll handler
+  const handleMedicineScroll = () => {
+    if (!isMedicineSearch) return;
+    const scrollY = window.scrollY;
+    const windowHeight = window.innerHeight;
+    const docHeight = document.body.offsetHeight;
+    if (scrollY + windowHeight >= docHeight - 200) {
+      setMedicineScrollCount((prev) => Math.min(prev + 8, mappedResults.length));
+    }
+  };
+
+  useEffect(() => {
+    if (isMedicineSearch) {
+      window.addEventListener("scroll", handleMedicineScroll);
+      return () => window.removeEventListener("scroll", handleMedicineScroll);
+    }
+  }, [isMedicineSearch, medicineScrollCount, mappedResults.length]);
+
+  // Reset scroll count when new search
+  useEffect(() => {
+    setMedicineScrollCount(8);
+  }, [searchQuery, selectedDrug]);
+
+  // Reset page when new filter
+  useEffect(() => {
+    setPharmacyPage(1);
+  }, [filterType, sortBy]);
+
+  // Handle location permission and fetch
+  useEffect(() => {
+    if (sortBy === 'distance' && !userLocation) {
+      if (window.navigator.geolocation) {
+        window.navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setLocationError(null);
+          },
+          () => {
+            setLocationError('Location permission denied or unavailable. Please allow location access to sort by nearest pharmacy.');
+          }
+        );
+      } else {
+        setLocationError('Geolocation is not supported by your browser.');
+      }
+    }
+  }, [sortBy, userLocation]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -643,62 +695,8 @@ export function HomePage() {
                   </option>
                 </select>
 
-                {/* Sort by Medicine Category */}
-                <select
-                  aria-label="Sort by medicine category"
-                  value={sortByCategory}
-                  onChange={(e) =>
-                    setSortByCategory(e.target.value)
-                  }
-                  className="px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent shadow-sm hover:shadow-md hover:border-teal-300 transition-all duration-200 ease-out text-sm font-medium cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10"
-                >
-                  <option value="none">
-                    Medicine Category
-                  </option>
-                  {medicineCategories.map((category) => (
-                    <option key={category} value={category}>
-                      Most {category} Stock
-                    </option>
-                  ))}
-                </select>
 
-                {/* Filter by Medicine Category - Only show when searching */}
-                {(searchQuery || selectedDrug) && (
-                  <select
-                    aria-label="Filter by medicine category"
-                    value={filterCategory}
-                    onChange={(e) =>
-                      setFilterCategory(e.target.value)
-                    }
-                    className="px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent shadow-sm hover:shadow-md hover:border-teal-300 transition-all duration-200 ease-out text-sm font-medium cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10"
-                  >
-                    <option value="all">All Categories</option>
-                    {medicineCategories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                )}
 
-                {/* Filter by Pharmacy Status */}
-                <select
-                  aria-label="Filter by pharmacy status"
-                  value={filterStatus}
-                  onChange={(e) =>
-                    setFilterStatus(
-                      e.target.value as
-                      | "all"
-                      | "open"
-                      | "closed",
-                    )
-                  }
-                  className="px-4 py-2.5 border border-gray-200 rounded-xl bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent shadow-sm hover:shadow-md hover:border-teal-300 transition-all duration-200 ease-out text-sm font-medium cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-10"
-                >
-                  <option value="all">All Pharmacies</option>
-                  <option value="open">Open Now</option>
-                  <option value="closed">Closed</option>
-                </select>
 
                 {/* Filter by Pharmacy Type */}
                 <select
@@ -718,11 +716,31 @@ export function HomePage() {
                 </select>
               </div>
 
+              {locationError && sortBy === 'distance' && (
+                <div className="bg-red-100 text-red-700 rounded p-3 mb-4 text-center">
+                  {locationError}
+                </div>
+              )}
               <PharmacyList
-                pharmacies={filteredResults}
-                searchQuery={searchQuery}
+                pharmacies={isMedicineSearch ? medicineResults : paginatedPharmacies}
                 searchQuery={searchQuery || selectedDrug || ""}
               />
+              {/* Pagination controls for pharmacy list (not medicine search) */}
+              {!isMedicineSearch && (
+                <div className="flex justify-center mt-8">
+                  <button
+                    className="px-4 py-2 mx-2 bg-teal-500 text-white rounded disabled:bg-gray-300"
+                    disabled={pharmacyPage === 1}
+                    onClick={() => setPharmacyPage(pharmacyPage - 1)}
+                  >Previous</button>
+                  <span className="px-4 py-2 mx-2 text-gray-700">Page {pharmacyPage}</span>
+                  <button
+                    className="px-4 py-2 mx-2 bg-teal-500 text-white rounded disabled:bg-gray-300"
+                    disabled={pharmacyPage * pharmaciesPerPage >= mappedResults.length}
+                    onClick={() => setPharmacyPage(pharmacyPage + 1)}
+                  >Next</button>
+                </div>
+              )}
             </motion.div>
           </main>
         </>

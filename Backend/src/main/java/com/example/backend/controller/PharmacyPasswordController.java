@@ -1,5 +1,3 @@
-
-
 package com.example.backend.controller;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +27,8 @@ public class PharmacyPasswordController {
     private String emailJsServiceId;
     @Value("${emailjs.template-id}")
     private String emailJsTemplateId;
+    @Value("${emailjs.public-key}")
+    private String emailJsPublicKey;
     @Value("${emailjs.private-key}")
     private String emailJsPrivateKey;
     @Value("${app.frontend.base-url:http://localhost:3000}")
@@ -50,11 +50,14 @@ public class PharmacyPasswordController {
             String url = "https://api.emailjs.com/api/v1.0/email/send";
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + emailJsPrivateKey);
+            // No Authorization header
 
             java.util.Map<String, Object> body = new java.util.HashMap<>();
             body.put("service_id", emailJsServiceId);
             body.put("template_id", emailJsTemplateId);
+            body.put("user_id", emailJsPublicKey); // required public key
+            body.put("accessToken", emailJsPrivateKey); // private key as accessToken
+
             java.util.Map<String, String> templateParams = new java.util.HashMap<>();
             templateParams.put("to_email", email);
             templateParams.put("reset_link", resetLink);

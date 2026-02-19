@@ -58,7 +58,7 @@ public class PublicPharmacyWithInventoryResponse {
             .phone(p.getTelephone())
             .hours(p.getOpeningHoursJson())
             .type(p.getEntityType())
-            .isOpen(true) // TODO: implement open/close logic if available
+            .isOpen(true)
             .latitude(latitude)
             .longitude(longitude)
             .inventory(inventory.stream().map(item -> {

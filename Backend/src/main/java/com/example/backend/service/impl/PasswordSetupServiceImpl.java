@@ -60,13 +60,23 @@ public class PasswordSetupServiceImpl implements PasswordSetupService {
     @Override
     public void setPassword(SetPasswordRequest req) {
 
+
         if (!req.getNewPassword().equals(req.getConfirmPassword())) {
             throw new RuntimeException("Passwords do not match!");
         }
 
-        // Basic password rules (simple)
-        if (req.getNewPassword().length() < 8) {
+        String password = req.getNewPassword();
+        if (password.length() < 8) {
             throw new RuntimeException("Password must be at least 8 characters!");
+        }
+        if (!password.matches(".*[a-z].*")) {
+            throw new RuntimeException("Password must contain at least one lowercase letter!");
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            throw new RuntimeException("Password must contain at least one uppercase letter!");
+        }
+        if (!password.matches(".*\\d.*")) {
+            throw new RuntimeException("Password must contain at least one number!");
         }
 
 

@@ -1,15 +1,13 @@
 package com.example.backend.repository;
 
-import com.example.backend.entity.Pharmacy;
-import com.example.backend.entity.PharmacyStatus;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import com.example.backend.entity.Pharmacy; // (or your package)
 
-import java.util.Optional;
+import com.example.backend.entity.Pharmacy;
+import com.example.backend.entity.PharmacyStatus;
 
 
 public interface PharmacyRepository extends JpaRepository<Pharmacy, Integer> {

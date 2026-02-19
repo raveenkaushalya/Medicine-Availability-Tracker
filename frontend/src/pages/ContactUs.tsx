@@ -117,7 +117,7 @@ export function ContactUs({ onPageChange }: ContactUsProps) {
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                       <Mail className="w-5 h-5 text-blue-600" />
                     </div>
-                    <span className="text-lg font-medium text-gray-800 group-hover:text-blue-600">info@pharmora.lk</span>
+                    <span className="text-lg font-medium text-gray-800 group-hover:text-blue-600">support@pharmora.lk</span>
                   </a>
                   <a href="tel:+94112345678" className="flex items-center gap-4 text-gray-600 hover:text-green-600 transition-colors group">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors">

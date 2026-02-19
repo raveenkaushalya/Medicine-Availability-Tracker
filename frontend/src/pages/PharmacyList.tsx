@@ -121,7 +121,17 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
         {pharmacies.map((pharmacy, index) => {
           if (!pharmacy) return null;
 
-          const drugsToDisplay = pharmacy.matchingDrugs || pharmacy.inventory;
+          // Sort drugs: in-stock first, then by most recently updated
+          const drugsToDisplay = [...(pharmacy.matchingDrugs || pharmacy.inventory)].sort((a, b) => {
+            // In-stock first
+            if (a.inStock !== b.inStock) {
+              return a.inStock ? -1 : 1;
+            }
+            // Most recently updated first
+            const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+            const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+            return bTime - aTime;
+          });
 
           return (
             <motion.div

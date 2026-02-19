@@ -285,7 +285,7 @@ export function HelpCenter() {
                 <h3 className="text-gray-900 text-xl font-bold mb-2 group-hover:text-emerald-600 transition-colors duration-200">WhatsApp Chat</h3>
                 <p className="text-gray-500 mb-6">Quick answers & updates</p>
                 <span className="text-emerald-600 font-semibold group-hover:text-emerald-700 text-lg">
-                  +94 77 123 4567
+                  +94 78 940 5488
                 </span>
               </motion.a>
             </div>
