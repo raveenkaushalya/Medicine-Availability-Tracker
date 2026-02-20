@@ -186,15 +186,15 @@ export function AIDrugInfo({ drugName }: AIDrugInfoProps) {
                     <h3 className="text-gray-900 mb-3">Common Uses</h3>
                     <ul className="space-y-2">
                       {drugInfo.usages.map((usage, index) => (
-                        <motion.li
-                          key={index}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.3 + index * 0.05 }}
-                          className="flex items-start gap-2 text-gray-600"
-                        >
-                          <span>{usage}</span>
-                        </motion.li>
+                        <li key={index} className="flex items-start gap-2 text-gray-600">
+                          <motion.span
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 + index * 0.05 }}
+                          >
+                            {usage}
+                          </motion.span>
+                        </li>
                       ))}
                     </ul>
                   </div>

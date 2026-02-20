@@ -441,7 +441,11 @@ export function AdminDashboard() {
             <h3 className="text-lg font-semibold text-gray-900">
               Pharmacy Activity Status
             </h3>
-            <select className="text-sm border-gray-200 rounded-lg text-gray-500 focus:ring-indigo-500 focus:border-indigo-500">
+            <select
+              className="text-sm border-gray-200 rounded-lg text-gray-500 focus:ring-indigo-500 focus:border-indigo-500"
+              aria-label="Select activity period"
+              title="Select activity period"
+            >
               <option>Last 7 Days</option>
               <option>Last 30 Days</option>
             </select>
@@ -1079,6 +1083,7 @@ export function AdminDashboard() {
               }}
               className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               title="Filter by status"
+              aria-label="Filter by status"
             >
               <option value="">All Status</option>
               <option value="ACTIVE">ACTIVE</option>
@@ -1209,6 +1214,8 @@ export function AdminDashboard() {
                       value={medicineForm.status}
                       onChange={handleMedicineFormChange}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      title="Status"
+                      aria-label="Status"
                     >
                       <option value="ACTIVE">ACTIVE</option>
                       <option value="ARCHIVED">INACTIVE</option>
@@ -1527,7 +1534,7 @@ export function AdminDashboard() {
                 Set the system timezone for logs
               </p>
             </div>
-            <select className="border-gray-200 rounded-lg text-sm">
+            <select className="border-gray-200 rounded-lg text-sm" aria-label="Timezone">
               <option>(GMT+05:30) Colombo, Sri Lanka</option>
               <option>(GMT+00:00) UTC</option>
             </select>
