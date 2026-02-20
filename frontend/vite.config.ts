@@ -83,5 +83,5 @@
       },
       // Enable SPA fallback for client-side routing
     },
-
+    base: './'
   });

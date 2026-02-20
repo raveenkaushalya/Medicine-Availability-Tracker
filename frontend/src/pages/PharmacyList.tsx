@@ -8,13 +8,9 @@
     return `${hour12}:${m.toString().padStart(2, '0')} ${ampm}`;
   }
 import medicineIcon from '../assets/images/medicine-icon.png';
-import medicineIconSmall from '../assets/images/medicine-icon-small.png';
 import pharmacyCross from '../assets/images/pharmacy-cross.png';
-import pillIcon from '../assets/images/pill-icon.png';
-import { MapPin, Phone, Clock, Package, DollarSign, Store } from 'lucide-react';
+import { MapPin, Phone, Clock, Package, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import heroImage from '../assets/images/hero-pills.png';
-import pharmacyLogo from '../assets/images/logo.png';
 
 interface Drug {
   drugName: string;
@@ -28,6 +24,8 @@ interface Drug {
 }
 
 interface Pharmacy {
+  longitude: any;
+  latitude: any;
   id: number;
   name: string;
   address: string;
@@ -49,20 +47,10 @@ interface PharmacyListProps {
 }
 
 // Helper function to generate random recent timestamps
-function getRecentTimestamp() {
-  const now = new Date();
-  const minutesAgo = Math.floor(Math.random() * 120); // Random time within last 2 hours
-  const timestamp = new Date(now.getTime() - minutesAgo * 60000);
 
-  if (minutesAgo < 60) {
-    return `${minutesAgo} min ago`;
-  } else {
-    const hoursAgo = Math.floor(minutesAgo / 60);
-    return `${hoursAgo} hour${hoursAgo > 1 ? 's' : ''} ago`;
-  }
-}
+import React, { useState, useRef, useEffect } from 'react';
 
-export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
+export function PharmacyList({ pharmacies }: PharmacyListProps) {
   // Helper to format relative time (hours, days, weeks)
   function timeAgo(updatedAt?: string) {
     if (!updatedAt) return '-';
@@ -115,23 +103,85 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
     );
   }
 
+  // Track expanded pharmacies by id
+  const [expandedPharmacies, setExpandedPharmacies] = useState<{ [id: number]: boolean }>({});
+  // Track the window start index for each expanded pharmacy
+  const [windowStart, setWindowStart] = useState<{ [id: number]: number }>({});
+  // Track the window size for each expanded pharmacy
+  const [windowSize, setWindowSize] = useState<{ [id: number]: number }>({});
+  // How many medicines to show in the window at a time
+  const WINDOW_SIZE = 9;
+  const WINDOW_STEP = 12;
+
+  // Refs for scroll containers per pharmacy
+  const scrollRefs = useRef<{ [id: number]: HTMLDivElement | null }>({});
+
+  // Scroll handler for all pharmacies
+  useEffect(() => {
+    const handler = (pharmacyId: number, sortedDrugs: Drug[]) => () => {
+      if (!expandedPharmacies[pharmacyId] || !scrollRefs.current[pharmacyId]) return;
+      const el = scrollRefs.current[pharmacyId];
+      if (!el) return;
+      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+        setWindowSize(prev => {
+          const current = prev[pharmacyId] ?? WINDOW_SIZE;
+          if (current >= sortedDrugs.length) return prev;
+          return { ...prev, [pharmacyId]: Math.min(current + WINDOW_STEP, sortedDrugs.length) };
+        });
+      }
+    };
+
+    // Attach listeners for expanded pharmacies
+    const listeners: { [id: number]: () => void } = {};
+    pharmacies.forEach(pharmacy => {
+      if (!pharmacy) return;
+      if (expandedPharmacies[pharmacy.id] && scrollRefs.current[pharmacy.id]) {
+        const sortedDrugs = [...(pharmacy.matchingDrugs || pharmacy.inventory)].sort((a, b) => {
+          if (a.inStock !== b.inStock) return a.inStock ? -1 : 1;
+          const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return bTime - aTime;
+        });
+        const fn = handler(pharmacy.id, sortedDrugs);
+        listeners[pharmacy.id] = fn;
+        scrollRefs.current[pharmacy.id]?.addEventListener('scroll', fn);
+      }
+    });
+    return () => {
+      Object.entries(listeners).forEach(([id, fn]) => {
+        scrollRefs.current[Number(id)]?.removeEventListener('scroll', fn);
+      });
+    };
+  }, [expandedPharmacies, pharmacies, setWindowSize]);
+
+  // Handler for "Show More" button
+  const handleShowMore = (pharmacyId: number) => {
+    setExpandedPharmacies(prev => ({ ...prev, [pharmacyId]: true }));
+    setWindowStart(prev => ({ ...prev, [pharmacyId]: 0 }));
+    setWindowSize(prev => ({ ...prev, [pharmacyId]: 9 }));
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <AnimatePresence mode="popLayout">
         {pharmacies.map((pharmacy, index) => {
           if (!pharmacy) return null;
 
           // Sort drugs: in-stock first, then by most recently updated
-          const drugsToDisplay = [...(pharmacy.matchingDrugs || pharmacy.inventory)].sort((a, b) => {
-            // In-stock first
+          const sortedDrugs = [...(pharmacy.matchingDrugs || pharmacy.inventory)].sort((a, b) => {
             if (a.inStock !== b.inStock) {
               return a.inStock ? -1 : 1;
             }
-            // Most recently updated first
             const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
             const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
             return bTime - aTime;
           });
+
+          const isExpanded = expandedPharmacies[pharmacy.id];
+          const start = windowStart[pharmacy.id] ?? 0;
+          const size = windowSize[pharmacy.id] ?? 6;
+          const drugsToDisplay = isExpanded ? sortedDrugs.slice(start, start + size) : sortedDrugs.slice(0, 6);
+          const showShowMore = sortedDrugs.length > 6 && !isExpanded;
 
           return (
             <motion.div
@@ -149,8 +199,8 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
             >
               {/* Pharmacy Header Card */}
               <div className="p-6 bg-[#F2F9FA] shadow-md border-b border-gray-200">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-4 flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1">
                     {/* Pharmacy Icon/Avatar */}
                     <div className="w-20 h-20 rounded-[24px] flex items-center justify-center flex-shrink-0 shadow-lg p-2 border-2 border-[#0250cf]">
                       <img src={pharmacyCross} alt="Pharmacy" className="w-full h-full object-contain rounded-[16px]" />
@@ -161,19 +211,17 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-gray-900 truncate">{pharmacy.name}</h3>
                       </div>
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 mb-2">
-                        <div className="flex items-center gap-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <MapPin className="w-3.5 h-3.5 text-[#0250cf]" />
                           <span className="text-gray-700">{pharmacy.address}</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           <Phone className="w-3.5 h-3.5 text-[#0250cf]" />
                           <span className="text-gray-700">{pharmacy.phone}</span>
                         </div>
-                        <div className="flex items-center gap-1 relative group cursor-pointer">
-                          <Clock className="w-3.5 h-3.5 text-[#0250cf]" />
+                        <div className="flex items-center gap-1 flex-shrink-0">
                           {(() => {
-                            // Determine open/closed status based on current time and today's hours
                             const d = new Date();
                             const day = d.getDay();
                             let hours = null;
@@ -185,7 +233,6 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                               hours = pharmacy.openingHours?.sunday;
                             }
                             let isOpen = false;
-                            // Only use the hours for the current day group, do not let Sat/Sun closed affect weekdays and vice versa
                             if (
                               hours &&
                               typeof hours.open === 'string' &&
@@ -193,7 +240,6 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                               hours.open.trim() !== '' &&
                               hours.close.trim() !== ''
                             ) {
-                              // Parse "HH:mm" to minutes since midnight
                               const [openH, openM] = hours.open.split(":").map(Number);
                               const [closeH, closeM] = hours.close.split(":").map(Number);
                               const nowMins = d.getHours() * 60 + d.getMinutes();
@@ -202,51 +248,36 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                               if (openMins < closeMins) {
                                 isOpen = nowMins >= openMins && nowMins < closeMins;
                               } else if (openMins > closeMins) {
-                                // Overnight (e.g. 22:00-06:00)
                                 isOpen = nowMins >= openMins || nowMins < closeMins;
                               }
                             }
-                            // If open/close is missing or empty for this day, always closed
                             return (
-                              <span className={`font-semibold ${isOpen ? 'text-green-700' : 'text-red-700'}`}>{isOpen ? 'Open now' : 'Closed'}</span>
+                              <span className={`font-semibold px-2 py-0.5 rounded text-sm ${isOpen ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>{isOpen ? 'Open now' : 'Closed'}</span>
                             );
                           })()}
-                          {/* Show Mon-Fri, Sat, Sun hours as 3 horizontal labels */}
-                          <div className="flex gap-1 ml-2">
-                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
-                              Mon-Fri: {pharmacy.openingHours?.weekdays?.open === '' && pharmacy.openingHours?.weekdays?.close === '' ? 'Closed' : (pharmacy.openingHours?.weekdays?.open && pharmacy.openingHours?.weekdays?.close ? `${format12Hour(pharmacy.openingHours.weekdays.open)} - ${format12Hour(pharmacy.openingHours.weekdays.close)}` : 'Not set')}
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
-                              Sat: {pharmacy.openingHours?.saturday?.open === '' && pharmacy.openingHours?.saturday?.close === '' ? 'Closed' : (pharmacy.openingHours?.saturday?.open && pharmacy.openingHours?.saturday?.close ? `${format12Hour(pharmacy.openingHours.saturday.open)} - ${format12Hour(pharmacy.openingHours.saturday.close)}` : 'Not set')}
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
-                              Sun: {pharmacy.openingHours?.sunday?.open === '' && pharmacy.openingHours?.sunday?.close === '' ? 'Closed' : (pharmacy.openingHours?.sunday?.open && pharmacy.openingHours?.sunday?.close ? `${format12Hour(pharmacy.openingHours.sunday.open)} - ${format12Hour(pharmacy.openingHours.sunday.close)}` : 'Not set')}
-                            </span>
-                          </div>
-                          {/* Popover for full opening hours (no label) */}
-                          <div className="absolute left-0 top-7 z-20 hidden group-hover:block bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[220px] text-xs text-gray-900">
-                            <div className="font-bold mb-2 text-[#0250cf]">Opening Hours</div>
-                            {pharmacy.openingHours && typeof pharmacy.openingHours === 'object' ? (
-                              <table className="w-full text-left">
-                                <tbody>
-                                  <tr><td className="pr-2">Mon-Fri:</td><td>{pharmacy.openingHours.weekdays?.open && pharmacy.openingHours.weekdays?.close ? `${format12Hour(pharmacy.openingHours.weekdays.open)} - ${format12Hour(pharmacy.openingHours.weekdays.close)}` : 'Not set'}</td></tr>
-                                  <tr><td className="pr-2">Mon-Fri:</td><td>{pharmacy.openingHours.weekdays?.open === '' && pharmacy.openingHours.weekdays?.close === '' ? 'Closed' : (pharmacy.openingHours.weekdays?.open && pharmacy.openingHours.weekdays?.close ? `${format12Hour(pharmacy.openingHours.weekdays.open)} - ${format12Hour(pharmacy.openingHours.weekdays.close)}` : 'Not set')}</td></tr>
-                                  <tr><td className="pr-2">Saturday:</td><td>{pharmacy.openingHours.saturday?.open === '' && pharmacy.openingHours.saturday?.close === '' ? 'Closed' : (pharmacy.openingHours.saturday?.open && pharmacy.openingHours.saturday?.close ? `${format12Hour(pharmacy.openingHours.saturday.open)} - ${format12Hour(pharmacy.openingHours.saturday.close)}` : 'Not set')}</td></tr>
-                                  <tr><td className="pr-2">Sunday:</td><td>{pharmacy.openingHours.sunday?.open === '' && pharmacy.openingHours.sunday?.close === '' ? 'Closed' : (pharmacy.openingHours.sunday?.open && pharmacy.openingHours.sunday?.close ? `${format12Hour(pharmacy.openingHours.sunday.open)} - ${format12Hour(pharmacy.openingHours.sunday.close)}` : 'Not set')}</td></tr>
-                                </tbody>
-                              </table>
-                            ) : (
-                              <div>Not available</div>
-                            )}
-                          </div>
+                        </div>
+                      </div>
+                      {/* Opening hours below address/phone/closed on all screens */}
+                      <div className="flex flex-wrap items-center gap-1 mt-2">
+                        <Clock className="w-3.5 h-3.5 text-[#0250cf]" />
+                        <div className="flex gap-1 ml-2">
+                          <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
+                            Mon-Fri: {pharmacy.openingHours?.weekdays?.open === '' && pharmacy.openingHours?.weekdays?.close === '' ? 'Closed' : (pharmacy.openingHours?.weekdays?.open && pharmacy.openingHours?.weekdays?.close ? `${format12Hour(pharmacy.openingHours.weekdays.open)} - ${format12Hour(pharmacy.openingHours.weekdays.close)}` : 'Not set')}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
+                            Sat: {pharmacy.openingHours?.saturday?.open === '' && pharmacy.openingHours?.saturday?.close === '' ? 'Closed' : (pharmacy.openingHours?.saturday?.open && pharmacy.openingHours?.saturday?.close ? `${format12Hour(pharmacy.openingHours.saturday.open)} - ${format12Hour(pharmacy.openingHours.saturday.close)}` : 'Not set')}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-200 whitespace-nowrap">
+                            Sun: {pharmacy.openingHours?.sunday?.open === '' && pharmacy.openingHours?.sunday?.close === '' ? 'Closed' : (pharmacy.openingHours?.sunday?.open && pharmacy.openingHours?.sunday?.close ? `${format12Hour(pharmacy.openingHours.sunday.open)} - ${format12Hour(pharmacy.openingHours.sunday.close)}` : 'Not set')}
+                          </span>
                         </div>
                       </div>
 
                     </div>
                   </div>
 
-                  {/* Get Directions Button & Call Button */}
-                  <div className="flex items-center gap-2">
+                  {/* Get Directions Button & Call Button - always below opening hours for mobile, right for desktop */}
+                  <div className="flex items-center gap-2 mt-4 sm:mt-0 sm:ml-4">
                     <a
                       href={`tel:${pharmacy.phone}`}
                       className="flex items-center justify-center rounded-full bg-transparent w-10 h-10 border border-[#0250cf]/60 transition-colors"
@@ -276,11 +307,13 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
 
               {/* Medications Grid */}
               <div className="p-6 bg-[#F2F9FA]">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                    ref={isExpanded ? el => { scrollRefs.current[pharmacy.id] = el; } : undefined}
+                    style={isExpanded ? { maxHeight: 480, overflowY: 'auto' } : {}}
+                  >
                   {drugsToDisplay.map((drug, drugIndex) => {
-                    const timestamp = getRecentTimestamp();
-                    const orderNum = String(drugIndex + 1).padStart(2, '0');
-
+                    const orderNum = String((isExpanded ? start : 0) + drugIndex + 1).padStart(2, '0');
                     return (
                       <motion.div
                         key={`${pharmacy.id}-${drug.drugName}-${drugIndex}`}
@@ -355,6 +388,24 @@ export function PharmacyList({ pharmacies, searchQuery }: PharmacyListProps) {
                     );
                   })}
                 </div>
+                {showShowMore && (
+                  <div className="flex justify-center mt-4">
+                    <button
+                      className="flex items-center justify-center w-32 h-12 rounded-lg bg-transparent text-gray-500 hover:bg-green-100 transition-colors shadow-md border border-black/40"
+                      onClick={() => handleShowMore(pharmacy.id)}
+                      title="Expand to show more medicines"
+                    >
+                      <span className="text-sm font-medium mr-1">Show More</span>
+                      <ChevronDown className="w-7 h-7" />
+                    </button>
+                  </div>
+                )}
+                {/* Loading indicator for windowing */}
+                {isExpanded && drugsToDisplay.length < sortedDrugs.length && (
+                  <div className="h-8 flex items-center justify-center text-xs text-gray-400">
+                    Loading more medicines...
+                  </div>
+                )}
               </div>
             </motion.div>
           );

@@ -217,6 +217,8 @@ export function HomePage() {
           }
         : {}),
       openingHours,
+      longitude: pharmacy.longitude ?? 0, // Ensure longitude is always present
+      latitude: pharmacy.latitude ?? 0,   // Ensure latitude is always present
     };
   });
 
@@ -729,13 +731,14 @@ export function HomePage() {
               {!isMedicineSearch && (
                 <div className="flex justify-center mt-8">
                   <button
-                    className="px-4 py-2 mx-2 bg-teal-500 text-white rounded disabled:bg-gray-300"
+                    className="px-4 py-2 mx-2 rounded-lg text-black shadow-md border disabled:bg-gray-100 disabled:text-gray-400 transition-colors"
+                    style ={{ backgroundColor: pharmacyPage === 1 ? '#DADBDD' : '#25383C', borderColor: pharmacyPage === 1 ? '#DADBDD' : '#25383C' }}
                     disabled={pharmacyPage === 1}
                     onClick={() => setPharmacyPage(pharmacyPage - 1)}
                   >Previous</button>
                   <span className="px-4 py-2 mx-2 text-gray-700">Page {pharmacyPage}</span>
                   <button
-                    className="px-4 py-2 mx-2 bg-teal-500 text-white rounded disabled:bg-gray-300"
+                    className="px-4 py-2 mx-2 rounded-lg bg-transparent text-black shadow-md border border-black/30 disabled:bg-gray-100 disabled:text-gray-400 transition-colors"
                     disabled={pharmacyPage * pharmaciesPerPage >= mappedResults.length}
                     onClick={() => setPharmacyPage(pharmacyPage + 1)}
                   >Next</button>

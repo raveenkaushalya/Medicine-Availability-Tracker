@@ -33,12 +33,9 @@ import {
   MessageSquare,
   Settings,
   Search,
-  Bell,
   Menu,
   Filter,
-  Download,
   Plus,
-  MoreVertical,
   CheckCircle,
   XCircle,
   Clock,
@@ -61,8 +58,6 @@ import {
 } from "recharts";
 import logoImage from "../../assets/images/logo.png";
 import { useNavigate } from "react-router-dom";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 const API_BASE = "http://localhost:8080";
 
@@ -105,6 +100,7 @@ async function apiFetch<T>(
 
 // Type definitions
 export interface PendingPharmacy {
+  name: string;
   id: number;
   legalEntityName: string;
   tradeName: string;
@@ -149,6 +145,7 @@ type SuggestItem = {
 };
 
 // Mock Data
+// FIX: keys match the dataKey props used in BarChart ("active" / "inactive")
 const CHART_DATA_ACTIVITY = [
   { name: "Mon", active: 400, inactive: 240 },
   { name: "Tue", active: 300, inactive: 139 },
@@ -165,58 +162,6 @@ const CHART_DATA_MEDICINES = [
   { name: "Out of Stock", value: 300, color: "#ef4444" },
 ];
 
-const MOCK_MEDICINES = [
-  {
-    id: 1,
-    generic: "Paracetamol",
-    name: "Panadol",
-    dosage: "500mg",
-    manufacturer: "GSK",
-    country: "Sri Lanka",
-    regNo: "R001",
-    status: "Active",
-  },
-  {
-    id: 2,
-    generic: "Amoxicillin",
-    name: "Amoxil",
-    dosage: "250mg",
-    manufacturer: "State Pharm",
-    country: "India",
-    regNo: "R002",
-    status: "Active",
-  },
-  {
-    id: 3,
-    generic: "Metformin",
-    name: "Glucophage",
-    dosage: "500mg",
-    manufacturer: "Merck",
-    country: "USA",
-    regNo: "R003",
-    status: "Active",
-  },
-  {
-    id: 4,
-    generic: "Atorvastatin",
-    name: "Lipitor",
-    dosage: "10mg",
-    manufacturer: "Pfizer",
-    country: "USA",
-    regNo: "R004",
-    status: "Active",
-  },
-  {
-    id: 5,
-    generic: "Omeprazole",
-    name: "Omez",
-    dosage: "20mg",
-    manufacturer: "Dr. Reddy's",
-    country: "India",
-    regNo: "R005",
-    status: "Active",
-  },
-];
 
 const MOCK_INQUIRIES = [
   {
@@ -262,29 +207,12 @@ export function AdminDashboard() {
   }, [navigate]);
 
   // PDF Export Handler
-  const handleExportPDF = (section: "pharmacies" | "medicines") => {
-    let tableId = "";
-    if (section === "pharmacies") tableId = "pharmacies-table";
-    if (section === "medicines") tableId = "medicines-table";
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    html2canvas(table).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "px",
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(`${section}-table.pdf`);
-    });
-  };
   // State for Pending Pharmacies (moved from HomePage)
   const [pendingPharmacies, setPendingPharmacies] = useState<PendingPharmacy[]>(
     [],
   );
-  const [pharmacyLoading, setPharmacyLoading] = useState(false);
-  const [pharmacyError, setPharmacyError] = useState<string | null>(null);
+  const [, setPharmacyLoading] = useState(false);
+  const [, setPharmacyError] = useState<string | null>(null);
   // Pharmacies State
   const [pharmacyFilter, setPharmacyFilter] = useState<
     "all" | "pending" | "approved" | "rejected"
@@ -295,28 +223,6 @@ export function AdminDashboard() {
     setPharmacyLoading(true);
 
     try {
-      type PageResponse<T> = { content: T[] };
-
-      type PharmacyRow = {
-        id: number;
-        legalEntityName: string;
-        tradeName: string;
-        nmraLicense: string;
-        businessRegNo: string;
-        addressInSriLanka: string;
-        telephone: string;
-        email: string;
-        entityType: string;
-
-        contactFullName: string;
-        contactTitle: string;
-        contactPhone: string;
-        contactEmail: string;
-
-        createdAt: string; // ISO from backend
-        status: string;
-      };
-
       const statusParam =
         pharmacyFilter === "all" ? "ALL" : pharmacyFilter.toUpperCase();
 
@@ -329,6 +235,8 @@ export function AdminDashboard() {
       const rows = page?.content || [];
       const mapped: PendingPharmacy[] = rows.map((p: any) => ({
         id: p.id,
+        // FIX: populate `name` field from legalEntityName or tradeName
+        name: p.tradeName || p.legalEntityName || "",
         legalEntityName: p.legalEntityName || "",
         tradeName: p.tradeName || "",
         nmraLicense: p.nmraLicense || "",
@@ -382,10 +290,10 @@ export function AdminDashboard() {
       // Find the approved pharmacy's info (email, name)
       const approvedPharmacy = pendingPharmacies.find((p) => p.id === id);
       if (setupLink && approvedPharmacy) {
-        // Send email automatically (no sending popup)
+        // FIX: use legalEntityName as fallback since name may be empty
         sendApprovalEmail(
           approvedPharmacy.email || approvedPharmacy.contactPersonEmail || '',
-          approvedPharmacy.name || 'Pharmacy',
+          approvedPharmacy.name || approvedPharmacy.legalEntityName || 'Pharmacy',
           setupLink
         );
         window.prompt(
@@ -436,7 +344,6 @@ export function AdminDashboard() {
 
   // Fetch total medicines and total active pharmacies
   useEffect(() => {
-    // Fetch total medicines (from new count endpoint)
     const fetchTotalMedicines = async () => {
       try {
         const res = await apiFetch<number>('/api/v1/admin/medicines/count');
@@ -446,7 +353,6 @@ export function AdminDashboard() {
       }
     };
 
-    // Fetch total active pharmacies (from new count endpoint)
     const fetchTotalActivePharmacies = async () => {
       try {
         const res = await apiFetch<number>('/api/v1/admin/pharmacies/count?status=APPROVED');
@@ -461,11 +367,10 @@ export function AdminDashboard() {
   }, []);
 
   const stats = {
-    totalPharmacies: totalActivePharmacies, // Only show real approved pharmacies
+    totalPharmacies: totalActivePharmacies,
     pendingReviews: pendingPharmacies.filter((p) => p.status === "pending").length,
     totalMedicines,
-    activeUsers: 8540, // Keep mock for now
-    // ... rest of stats
+    activeUsers: 8540,
   };
 
   const filteredPharmacies = pendingPharmacies.filter((p) =>
@@ -573,15 +478,16 @@ export function AdminDashboard() {
                   iconType="circle"
                   wrapperStyle={{ paddingTop: "20px" }}
                 />
+                {/* FIX: dataKey must match the lowercase keys in CHART_DATA_ACTIVITY */}
                 <Bar
-                  dataKey="ACTIVE"
-                  name="ACTIVE"
+                  dataKey="active"
+                  name="Active"
                   fill="#4f46e5"
                   radius={[4, 4, 0, 0]}
                   barSize={32}
                 />
                 <Bar
-                  dataKey="INACTIVE"
+                  dataKey="inactive"
                   name="Dormant"
                   fill="#e5e7eb"
                   radius={[4, 4, 0, 0]}
@@ -678,7 +584,6 @@ export function AdminDashboard() {
                 No pending registrations.
               </p>
             )}
-            
           </div>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -917,8 +822,8 @@ export function AdminDashboard() {
   const [editingMedicine, setEditingMedicine] =
     useState<AdminMedicineRow | null>(null);
   const [medicines, setMedicines] = useState<AdminMedicineRow[]>([]);
-  const [medLoading, setMedLoading] = useState(false);
-  const [medError, setMedError] = useState<string | null>(null);
+  const [, setMedLoading] = useState(false);
+  const [, setMedError] = useState<string | null>(null);
 
   const [medPage, setMedPage] = useState(0);
   const [medSize] = useState(10);
@@ -927,8 +832,8 @@ export function AdminDashboard() {
 
   const [medQ, setMedQ] = useState("");
   const [filterStatus, setFilterStatus] = useState<"" | CatalogStatus>("");
-  const [filterManufacturer, setFilterManufacturer] = useState<string>("");
-  const [filterBrand, setFilterBrand] = useState<string>("");
+  const [filterManufacturer] = useState<string>("");
+  const [] = useState<string>("");
 
   // Form state for modal
   const [medicineForm, setMedicineForm] = useState({
@@ -971,23 +876,23 @@ export function AdminDashboard() {
     setEditingMedicine(null);
   };
 
-  // Handle form change
-  const handleMedicineFormChange = (e) => {
+  // FIX: typed event parameter
+  const handleMedicineFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setMedicineForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Save medicine (add or edit)  ✅ DB + refresh
-  const handleMedicineSave = async (e) => {
+  // Save medicine (add or edit)
+  const handleMedicineSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ✅ capture ID BEFORE any state changes
     const editId = editingMedicine?.id ?? null;
     const isEdit = editId !== null;
 
     try {
       if (isEdit) {
-        // ✅ UPDATE (PUT)
         await apiFetch(`/api/v1/admin/medicines/${editId}`, {
           method: "PUT",
           body: JSON.stringify({
@@ -996,11 +901,10 @@ export function AdminDashboard() {
             brandName: medicineForm.brandName,
             manufacturer: medicineForm.manufacturer,
             country: medicineForm.country,
-            status: medicineForm.status, // ACTIVE / ARCHIVED
+            status: medicineForm.status,
           }),
         });
       } else {
-        // ✅ CREATE (POST)
         await apiFetch(`/api/v1/admin/medicines`, {
           method: "POST",
           body: JSON.stringify({
@@ -1009,16 +913,15 @@ export function AdminDashboard() {
             brandName: medicineForm.brandName,
             manufacturer: medicineForm.manufacturer,
             country: medicineForm.country,
-            status: medicineForm.status, // ACTIVE / ARCHIVED
+            status: medicineForm.status,
           }),
         });
       }
 
       closeMedicineModal();
-
-      // ✅ reload table from DB
       await loadMedicines({ page: isEdit ? medPage : 0, q: medQ });
-    } catch (err) {
+    } catch (err: any) {
+      // FIX: typed catch variable
       alert(err?.message || "Save failed");
     }
   };
@@ -1029,7 +932,6 @@ export function AdminDashboard() {
     if (!ok) return;
 
     try {
-      // ✅ delete from database
       const res = await fetch(
         `http://localhost:8080/api/v1/admin/medicines/${id}`,
         {
@@ -1043,13 +945,11 @@ export function AdminDashboard() {
         throw new Error(msg || `Delete failed (${res.status})`);
       }
 
-      // ✅ refresh list from DB so UI matches database
       await loadMedicines({ page: medPage, q: medQ });
-
-      // ✅ optional message (if you have a toast/message state)
-      showMedNotice?.("success", "Medicine deleted ✅");
+      // FIX: call directly instead of optional chaining on a local function
+      showMedNotice("success", "Medicine deleted ✅");
     } catch (err: any) {
-      showMedNotice?.("error", err.message || "Delete failed ❌");
+      showMedNotice("error", err.message || "Delete failed ❌");
       console.error(err);
     }
   };
@@ -1058,7 +958,6 @@ export function AdminDashboard() {
     type: "success" | "error";
     text: string;
   }>(null);
-  const [medSaving, setMedSaving] = useState(false);
 
   function showMedNotice(type: "success" | "error", text: string) {
     setMedNotice({ type, text });
@@ -1071,12 +970,11 @@ export function AdminDashboard() {
     [],
   );
   const [showMedicineSuggestions, setShowMedicineSuggestions] = useState(false);
-  const [medicineSuggestLoading, setMedicineSuggestLoading] = useState(false);
+  const [, setMedicineSuggestLoading] = useState(false);
 
   useEffect(() => {
     const q = medicineQuery.trim();
 
-    // don't spam backend for 0-1 chars
     if (q.length < 2) {
       setMedicineSuggestions([]);
       setMedicineSuggestLoading(false);
@@ -1086,8 +984,6 @@ export function AdminDashboard() {
     const t = setTimeout(async () => {
       try {
         setMedicineSuggestLoading(true);
-
-        // ✅ this endpoint you tested
         const res = await apiFetch<SuggestItem[]>(
           `/api/v1/admin/medicines/suggest?q=${encodeURIComponent(q)}`,
         );
@@ -1097,13 +993,26 @@ export function AdminDashboard() {
       } finally {
         setMedicineSuggestLoading(false);
       }
-    }, 250); // debounce
+    }, 250);
 
     return () => clearTimeout(t);
   }, [medicineQuery]);
 
   const renderMedicineDatabase = () => (
     <div className="space-y-6">
+      {/* Notice banner */}
+      {medNotice && (
+        <div
+          className={`px-4 py-3 rounded-lg text-sm font-medium ${
+            medNotice.type === "success"
+              ? "bg-green-100 text-green-800"
+              : "bg-red-100 text-red-800"
+          }`}
+        >
+          {medNotice.text}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-4 items-stretch">
         <div className="flex flex-1 gap-2 flex-wrap items-center min-w-0">
           <div className="relative">
@@ -1156,36 +1065,25 @@ export function AdminDashboard() {
 
           <div className="flex gap-2 items-center">
             <Filter className="w-4 h-4 text-gray-400" />
-            {(() => {
-              let selectValue = "";
-              if (filterStatus === "ACTIVE") selectValue = "ACTIVE";
-              else if (filterStatus === "ARCHIVED") selectValue = "INACTIVE";
-              else selectValue = "";
-              return (
-                <select
-                  value={selectValue}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "ACTIVE") {
-                      setFilterStatus("ACTIVE");
-                      loadMedicines({ page: 0, q: medQ });
-                    } else if (val === "INACTIVE") {
-                      setFilterStatus("ARCHIVED");
-                      loadMedicines({ page: 0, q: medQ });
-                    } else {
-                      setFilterStatus("");
-                      loadMedicines({ page: 0, q: medQ });
-                    }
-                  }}
-                  className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  title="Filter by status"
-                >
-                  <option value="">All Status</option>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
-              );
-            })()}
+            {/* FIX: apply new status immediately by passing it directly to loadMedicines */}
+            <select
+              value={filterStatus === "ARCHIVED" ? "INACTIVE" : filterStatus}
+              onChange={(e) => {
+                const val = e.target.value;
+                const newStatus: "" | CatalogStatus =
+                  val === "ACTIVE" ? "ACTIVE" : val === "INACTIVE" ? "ARCHIVED" : "";
+                setFilterStatus(newStatus);
+                // pass newStatus directly to avoid stale closure
+                setMedPage(0);
+                loadMedicinesWithStatus(0, medQ, newStatus);
+              }}
+              className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              title="Filter by status"
+            >
+              <option value="">All Status</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </select>
           </div>
         </div>
         <div className="flex items-center sm:items-end justify-end min-w-[140px]">
@@ -1200,7 +1098,7 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      {/* Modal for Add/Edit Medicine - with blur and smooth animation */}
+      {/* Modal for Add/Edit Medicine */}
       <AnimatePresence>
         {isMedicineModalOpen && (
           <motion.div
@@ -1242,6 +1140,8 @@ export function AdminDashboard() {
                       onChange={handleMedicineFormChange}
                       required
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Enter generic name"
+                      title="Generic Name"
                     />
                   </div>
 
@@ -1255,6 +1155,8 @@ export function AdminDashboard() {
                       onChange={handleMedicineFormChange}
                       required
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Enter brand name"
+                      title="Brand Name"
                     />
                   </div>
 
@@ -1267,6 +1169,9 @@ export function AdminDashboard() {
                       value={medicineForm.manufacturer}
                       onChange={handleMedicineFormChange}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Enter manufacturer"
+                      title="Manufacturer"
+                      aria-label="Manufacturer"
                     />
                   </div>
                   <div>
@@ -1278,6 +1183,8 @@ export function AdminDashboard() {
                       value={medicineForm.country}
                       onChange={handleMedicineFormChange}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Enter your country"
+                      title="Country"
                     />
                   </div>
                   <div>
@@ -1289,6 +1196,8 @@ export function AdminDashboard() {
                       value={medicineForm.regNo}
                       onChange={handleMedicineFormChange}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Enter registration number"
+                      title="Registration Number"
                     />
                   </div>
                   <div>
@@ -1334,7 +1243,6 @@ export function AdminDashboard() {
               <tr>
                 <th className="px-6 py-4">Generic Name</th>
                 <th className="px-6 py-4">Brand Name</th>
-
                 <th className="px-6 py-4">Manufacturer</th>
                 <th className="px-6 py-4">Country</th>
                 <th className="px-6 py-4">Reg. No</th>
@@ -1367,7 +1275,7 @@ export function AdminDashboard() {
                       }`}
                       title={med.status === "ACTIVE" ? "Set as INACTIVE" : "Set as ACTIVE"}
                       onClick={async () => {
-                        const newStatus = med.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE";
+                        const newStatus: CatalogStatus = med.status === "ACTIVE" ? "ARCHIVED" : "ACTIVE";
                         await apiFetch(`/api/v1/admin/medicines/${med.id}`, {
                           method: "PUT",
                           body: JSON.stringify({ ...med, status: newStatus }),
@@ -1458,7 +1366,15 @@ export function AdminDashboard() {
   async function loadMedicines(params?: { page?: number; q?: string }) {
     const page = params?.page ?? medPage;
     const q = params?.q ?? medQ;
+    await loadMedicinesWithStatus(page, q, filterStatus);
+  }
 
+  // FIX: separate function that accepts status directly to avoid stale closure
+  async function loadMedicinesWithStatus(
+    page: number,
+    q: string,
+    status: "" | CatalogStatus
+  ) {
     setMedLoading(true);
     setMedError(null);
 
@@ -1466,7 +1382,7 @@ export function AdminDashboard() {
       const url =
         `/api/v1/admin/medicines?page=${page}&size=${medSize}` +
         (q ? `&q=${encodeURIComponent(q)}` : "") +
-        (filterStatus ? `&status=${filterStatus}` : "") +
+        (status ? `&status=${status}` : "") +
         (filterManufacturer
           ? `&manufacturer=${encodeURIComponent(filterManufacturer)}`
           : "");
@@ -1623,8 +1539,15 @@ export function AdminDashboard() {
                 Receive daily digest of activities
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
+            <label className="relative inline-flex items-center cursor-pointer" htmlFor="email-notifications-checkbox">
+              <input
+                id="email-notifications-checkbox"
+                type="checkbox"
+                className="sr-only peer"
+                defaultChecked
+                aria-label="Enable email notifications"
+                title="Enable email notifications"
+              />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
           </div>
