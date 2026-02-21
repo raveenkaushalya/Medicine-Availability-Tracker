@@ -55,7 +55,7 @@ export function Footer({
           <button
             onClick={(e) => {
               e.preventDefault();
-              window.location.href = '/notfound';
+              window.location.href = '#/notfound';
             }}
             className="text-gray-400 hover:text-white transition-colors"
           >
@@ -73,11 +73,7 @@ export function Footer({
         <div className="flex gap-6 mb-8">
           {/* Facebook */}
           <motion.a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.href = '/notfound';
-            }}
+            href="#/notfound"
             whileHover={{ scale: 1.1 }}
             className="text-gray-400 hover:text-white transition-colors"
           >
@@ -92,11 +88,7 @@ export function Footer({
 
           {/* Instagram */}
           <motion.a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.href = '/notfound';
-            }}
+            href="#/notfound"
             whileHover={{ scale: 1.1 }}
             className="text-gray-400 hover:text-white transition-colors"
           >
@@ -111,11 +103,7 @@ export function Footer({
 
           {/* X (Twitter) */}
           <motion.a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.href = '/notfound';
-            }}
+            href="#/notfound"
             whileHover={{ scale: 1.1 }}
             className="text-gray-400 hover:text-white transition-colors"
           >

@@ -108,12 +108,7 @@ export function ContactUs({ onPageChange }: ContactUsProps) {
 
               <div className="pt-4">
                 <div className="flex flex-col gap-5 items-start w-full">
-                  <a href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.location.href = '/notfound';
-                    }}
-                    className="flex items-center gap-4 text-gray-600 hover:text-blue-600 transition-colors group">
+                  <a href="mailto:raveenonline7@gmail.com" className="flex items-center gap-4 text-gray-600 hover:text-blue-600 transition-colors group">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
                       <Mail className="w-5 h-5 text-blue-600" />
                     </div>
@@ -128,7 +123,7 @@ export function ContactUs({ onPageChange }: ContactUsProps) {
                   <a href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      window.location.href = '/notfound';
+                      window.location.href = '#/notfound';
                     }}
                     className="flex items-center gap-4 text-gray-600 hover:text-indigo-600 transition-colors group">
                     <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
@@ -136,7 +131,7 @@ export function ContactUs({ onPageChange }: ContactUsProps) {
                     </div>
                     <span className="text-lg font-medium text-gray-800 group-hover:text-indigo-600">Pharmora Sri Lanka</span>
                   </a>
-                  <a href="#" className="flex items-center gap-4 text-gray-600 hover:text-purple-600 transition-colors group">
+                  <a href="https://raveenkaushalya.github.io/Medicine-Availability-Tracker/" className="flex items-center gap-4 text-gray-600 hover:text-purple-600 transition-colors group">
                     <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 transition-colors">
                       <Globe className="w-5 h-5 text-purple-600" />
                     </div>

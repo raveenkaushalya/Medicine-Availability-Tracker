@@ -229,7 +229,7 @@ export function HelpCenter() {
             {/* Contact Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <motion.a
-                href="mailto:support@pharmora.lk"
+                href="mailto:raveenonline7@gmail.com"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9, type: "spring", stiffness: 300 }}
