@@ -6,6 +6,8 @@ The system provides real-time stock visibility, price transparency, and powerful
 
 This project was developed as part of the **DEA (Development of Enterprise Applications) Module**.
 
+**Dev Website Link:** https://raveenkaushalya.github.io/Medicine-Availability-Tracker
+
 ---
 
 ## Key Features
