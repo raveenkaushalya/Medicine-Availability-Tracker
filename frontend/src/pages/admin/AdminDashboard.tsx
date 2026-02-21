@@ -59,44 +59,7 @@ import {
 import logoImage from "../../assets/images/logo.png";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = "http://localhost:8080";
-
-// session-cookie fetch helper
-async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-    credentials: "include",
-  });
-
-  const text = await res.text(); // read raw first
-
-  let data: any = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = null;
-  }
-
-  if (!res.ok) {
-    // show useful error
-    const msg =
-      data?.message ||
-      data?.error ||
-      (text && text.trim()) ||
-      `Request failed (${res.status})`;
-    throw new Error(msg);
-  }
-
-  // handle empty success response
-  return (data ?? ({} as any)) as T;
-}
+import { apiFetch } from '../../utils/api';
 
 // Type definitions
 export interface PendingPharmacy {
@@ -226,7 +189,7 @@ export function AdminDashboard() {
       const statusParam =
         pharmacyFilter === "all" ? "ALL" : pharmacyFilter.toUpperCase();
 
-      const res = await apiFetch<any>(
+      const res = await apiFetch(
         `/api/v1/admin/pharmacies?status=${statusParam}&page=0&size=50`,
       );
 
@@ -279,7 +242,7 @@ export function AdminDashboard() {
 
   const onApprove = async (id: number) => {
     try {
-      const res = await apiFetch<any>(
+      const res = await apiFetch(
         `/api/v1/admin/pharmacies/${id}/approve`,
         {
           method: "PATCH",
@@ -346,7 +309,7 @@ export function AdminDashboard() {
   useEffect(() => {
     const fetchTotalMedicines = async () => {
       try {
-        const res = await apiFetch<number>('/api/v1/admin/medicines/count');
+        const res = await apiFetch('/api/v1/admin/medicines/count');
         setTotalMedicines(typeof res === 'number' ? res : 0);
       } catch {
         setTotalMedicines(0);
@@ -355,7 +318,7 @@ export function AdminDashboard() {
 
     const fetchTotalActivePharmacies = async () => {
       try {
-        const res = await apiFetch<number>('/api/v1/admin/pharmacies/count?status=APPROVED');
+        const res = await apiFetch('/api/v1/admin/pharmacies/count?status=APPROVED');
         setTotalActivePharmacies(typeof res === 'number' ? res : 0);
       } catch {
         setTotalActivePharmacies(0);
@@ -936,18 +899,9 @@ export function AdminDashboard() {
     if (!ok) return;
 
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/v1/admin/medicines/${id}`,
-        {
-          method: "DELETE",
-          credentials: "include",
-        },
-      );
-
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || `Delete failed (${res.status})`);
-      }
+      await apiFetch(`/api/v1/admin/medicines/${id}`, {
+        method: "DELETE",
+      });
 
       await loadMedicines({ page: medPage, q: medQ });
       // FIX: call directly instead of optional chaining on a local function
@@ -988,7 +942,7 @@ export function AdminDashboard() {
     const t = setTimeout(async () => {
       try {
         setMedicineSuggestLoading(true);
-        const res = await apiFetch<SuggestItem[]>(
+        const res = await apiFetch(
           `/api/v1/admin/medicines/suggest?q=${encodeURIComponent(q)}`,
         );
         setMedicineSuggestions(Array.isArray(res) ? res : []);
@@ -1054,7 +1008,7 @@ export function AdminDashboard() {
                       setMedicineQuery(s.name);
                       setShowMedicineSuggestions(false);
 
-                      const full = await apiFetch<AdminMedicineRow>(
+                      const full = await apiFetch(
                         `/api/v1/admin/medicines/${s.id}`,
                       );
                       openMedicineModal(full);
@@ -1394,7 +1348,7 @@ export function AdminDashboard() {
           ? `&manufacturer=${encodeURIComponent(filterManufacturer)}`
           : "");
 
-      const res = await apiFetch<SpringPage<AdminMedicineRow>>(url);
+      const res = await apiFetch(url);
 
       setMedicines(res.content);
       setMedPage(res.number);

@@ -1,0 +1,16 @@
+{
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@vitejs/plugin-react-swc": "^4.2.3",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "@emailjs/browser": "^4.4.1",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.575.0",
+    "motion": "^12.34.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.0"
+  }
+}

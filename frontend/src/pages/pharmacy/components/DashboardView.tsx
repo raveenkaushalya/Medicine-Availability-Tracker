@@ -26,7 +26,7 @@ type ActivityRow = {
   createdAt: string; // ISO
 };
 
-const API = "http://localhost:8080";
+const API = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
 
 function actionDot(action: string) {
   switch ((action || "").toUpperCase()) {

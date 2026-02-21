@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
+import { apiFetch } from "../../utils/api";
 import MapPicker from "./components/MapPicker";
 
 export default function PharmacySetPassword() {
@@ -79,15 +79,19 @@ export default function PharmacySetPassword() {
       setLoading(true);
       setMsg("");
 
-      await axios.post("http://localhost:8080/api/v1/pharmacies/set-password", {
-        token,
-        newPassword,
-        confirmPassword,
-        latitude,
-        longitude,
+
+      await apiFetch("/api/v1/pharmacies/set-password", {
+        method: "POST",
+        body: JSON.stringify({
+          token,
+          newPassword,
+          confirmPassword,
+          latitude,
+          longitude,
+        }),
       });
 
-      alert("✅ Password set + Location saved!");
+      alert("Password set + Location saved!");
       navigate("/");
     } catch (err: any) {
       setMsg(err?.response?.data?.message || "Failed to set password.");
