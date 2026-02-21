@@ -15,15 +15,15 @@ export default function PharmacySetPassword() {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ Picked (not confirmed yet)
+  // Picked (not confirmed yet)
   const [pickedLat, setPickedLat] = useState<number | null>(null);
   const [pickedLng, setPickedLng] = useState<number | null>(null);
 
-  // ✅ Confirmed (ONLY these will be sent to backend)
+  // Confirmed (ONLY these will be sent to backend)
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
 
-  // ✅ GPS button -> sets picked only (not confirmed)
+  // GPS button -> sets picked only (not confirmed)
   const useMyLocation = () => {
     if (!navigator.geolocation) {
       setMsg("Geolocation is not supported in this device.");
@@ -34,9 +34,9 @@ export default function PharmacySetPassword() {
       (pos) => {
         setPickedLat(pos.coords.latitude);
         setPickedLng(pos.coords.longitude);
-        setMsg("📍 Location detected. Now press ✅ Confirm Location.");
+        setMsg("Location detected. Now press Confirm Location.");
       },
-      () => setMsg("❌ Location permission denied. Please pin on the map."),
+      () => setMsg("Location permission denied. Please pin on the map."),
       { enableHighAccuracy: true, timeout: 8000 }
     );
   };
@@ -48,7 +48,7 @@ export default function PharmacySetPassword() {
     }
     setLatitude(pickedLat);
     setLongitude(pickedLng);
-    setMsg("✅ Location confirmed!");
+    setMsg("Location confirmed!");
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -69,9 +69,9 @@ export default function PharmacySetPassword() {
       return;
     }
 
-    // ✅ require CONFIRMED location
+    // require CONFIRMED location
     if (latitude == null || longitude == null) {
-      setMsg("Please pin your location and press ✅ Confirm Location.");
+      setMsg("Please pin your location and press Confirm Location.");
       return;
     }
 
@@ -212,7 +212,7 @@ export default function PharmacySetPassword() {
               marginTop: 10,
             }}
           >
-            ✅ Confirm Location
+            Confirm Location
           </button>
 
           {/* Confirmed */}
